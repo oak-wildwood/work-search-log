@@ -41,13 +41,34 @@ npm run preview # serve that build locally to sanity-check it
 
 ## Deploying your own copy
 
-The build is a static site (`dist/`), so any static host works.
+The build is a static site (`dist/`), so any static host works. If you just forked this to use it
+yourself, GitHub Pages needs nothing beyond the repo you already have — no extra account, no
+signup.
 
-- **Vercel**: import this repo at [vercel.com/new](https://vercel.com/new) — it's a zero-config
-  Vite app, no settings to change.
-- **GitHub Pages**: this repo ships `.github/workflows/pages.yml`, disabled by default. In your
-  fork, go to Settings → Pages → Source → "GitHub Actions", then remove the `if: false` line (or
-  flip it to `true`) in that workflow file and push to `main`.
+### GitHub Pages (no extra account needed)
+
+1. Fork this repo.
+2. In your fork, go to **Settings → Pages**. Under "Build and deployment", set **Source** to
+   **GitHub Actions**.
+3. Open `.github/workflows/pages.yml` in your fork and delete this line (it ships disabled so
+   forking the repo doesn't silently start deploying to your account):
+   ```yaml
+   if: false # flip to `true` (or delete this line) once Pages is enabled for your fork
+   ```
+   Commit that change directly on `main` (editing the file in the GitHub web UI and committing to
+   `main` works fine).
+4. That commit itself triggers the workflow — watch it under the **Actions** tab. You can also
+   re-run it anytime from Actions → "Deploy to GitHub Pages" → "Run workflow".
+5. Once it finishes (about 30 seconds to build, then a minute or so for Pages to actually serve
+   it the first time), your copy is live at `https://<your-username>.github.io/work-search-log/`.
+
+Every future push to `main` redeploys automatically.
+
+### Vercel
+
+Import this repo at [vercel.com/new](https://vercel.com/new) — it's a zero-config Vite app, no
+settings to change. Requires a Vercel account; gives you preview deployments per branch/PR, which
+GitHub Pages doesn't.
 
 ## Adapting it for another state
 
