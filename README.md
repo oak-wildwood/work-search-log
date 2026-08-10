@@ -49,20 +49,20 @@ signup.
 
 1. Fork this repo.
 2. In your fork, go to **Settings → Pages**. Under "Build and deployment", set **Source** to
-   **GitHub Actions**.
-3. Open `.github/workflows/pages.yml` in your fork and delete this line (it ships disabled so
-   forking the repo doesn't silently start deploying to your account):
-   ```yaml
-   if: false # flip to `true` (or delete this line) once Pages is enabled for your fork
-   ```
-   Commit that change directly on `main` (editing the file in the GitHub web UI and committing to
-   `main` works fine).
-4. That commit itself triggers the workflow — watch it under the **Actions** tab. You can also
-   re-run it anytime from Actions → "Deploy to GitHub Pages" → "Run workflow".
-5. Once it finishes (about 30 seconds to build, then a minute or so for Pages to actually serve
-   it the first time), your copy is live at `https://<your-username>.github.io/work-search-log/`.
+   **GitHub Actions**. That's the only manual step — the `.github/workflows/pages.yml` workflow
+   already in the repo handles the rest.
+3. That setting change alone doesn't trigger a deploy — push any commit to `main` (or go to
+   **Actions → "Deploy to GitHub Pages" → Run workflow** to trigger it without waiting for one).
+4. Watch it under the **Actions** tab. Once it finishes (about 30 seconds to build, then a minute
+   or so for Pages to actually serve it the first time), your copy is live at
+   `https://<your-username>.github.io/work-search-log/`.
 
 Every future push to `main` redeploys automatically.
+
+> If Pages ever serves a blank page with a 404 for `/src/main.ts` in the console, GitHub fell back
+> to its own generic deploy instead of running this repo's workflow — usually because the
+> workflow hadn't run yet when Pages was first enabled. Push any commit (or re-run the workflow
+> manually) and it self-corrects.
 
 ### Vercel
 
