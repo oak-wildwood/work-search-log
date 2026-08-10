@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --ink: #1b2620;
+  --paper: #f4f2ea;
+  --paper-2: #ebe7d8;
+  --card: #fffdf7;
+  --line: #c9c2a8;
+  --brass: #8a6d3b;
+  --stamp: #7a3b32;
+  --green: #3f5d44;
+  --green-deep: #2c4230;
+  --ok: #3f5d44;
+  --warn: #a2472f;
+  --placeholder: #b3ac91;
+  --muted: #5a5748;
+  --shadow: rgba(43, 36, 20, 0.08);
+
+  --font-display: 'Spectral', serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+:root[data-theme='dark'] {
+  --ink: #e9e5d6;
+  --paper: #181c16;
+  --paper-2: #20241c;
+  --card: #1e2219;
+  --line: #3c4234;
+  --brass: #cda86b;
+  --stamp: #d68870;
+  --green: #86ab88;
+  --green-deep: #a9c9ac;
+  --ok: #86ab88;
+  --warn: #e0916f;
+  --placeholder: #6b6a56;
+  --muted: #a8a48c;
+  --shadow: rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  background-image: repeating-linear-gradient(transparent, transparent 27px, var(--shadow) 28px);
+  color: var(--ink);
+  font-family: var(--font-mono);
+}

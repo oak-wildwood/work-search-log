@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+# Opt-in: this repo defaults to a Vercel deploy. To use Pages instead (or as well),
+# go to Settings → Pages → Source → "GitHub Actions" in your fork, then push to main
+# or run this workflow manually.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: false # flip to `true` (or delete this line) once Pages is enabled for your fork
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vite build --base=/${{ github.event.repository.name }}/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

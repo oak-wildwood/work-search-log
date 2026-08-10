@@ -1,0 +1,14 @@
+@import './styles/tokens.css';
+
+::placeholder {
+  color: var(--placeholder);
+}
+
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
