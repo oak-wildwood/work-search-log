@@ -7,6 +7,7 @@ function makeEntry(date: string, id = date): Entry {
     id,
     date,
     activity: 'Applied online for a job',
+    siteAppliedOn: '',
     jobType: '',
     employer: '',
     address: '',

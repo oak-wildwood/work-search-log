@@ -7,6 +7,7 @@ function makeEntry(overrides: Partial<Entry>): Entry {
     id: '1',
     date: '2026-08-10',
     activity: 'Applied online for a job',
+    siteAppliedOn: 'LinkedIn',
     jobType: 'Warehouse associate',
     employer: 'Acme Co',
     address: '',
@@ -27,7 +28,7 @@ describe('toCsv', () => {
     const lines = csv.split('\n')
     expect(lines).toHaveLength(2)
     expect(lines[0]).toBe(
-      'Date,Activity,Job Type Sought,Employer,Address/Website,Phone,Contact Name,Contact Method,Result,Notes',
+      'Date,Activity,Site Applied On,Job Type Sought,Employer,Address/Website,Phone,Contact Name,Contact Method,Result,Notes',
     )
   })
 

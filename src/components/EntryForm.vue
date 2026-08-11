@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
 import type { Entry, EntryDraft } from '../types'
-import { ACTIVITY_OPTIONS, CONTACT_METHOD_OPTIONS, RESULT_OPTIONS } from '../types'
+import { ACTIVITY_OPTIONS, CONTACT_METHOD_OPTIONS, RESULT_OPTIONS, SITE_OPTIONS } from '../types'
 
 const props = defineProps<{
   editing?: Entry | null
@@ -16,6 +16,7 @@ function blankDraft(): EntryDraft {
   return {
     date: '',
     activity: '',
+    siteAppliedOn: '',
     jobType: '',
     employer: '',
     address: '',
@@ -29,6 +30,7 @@ function blankDraft(): EntryDraft {
 
 const draft = reactive<EntryDraft>(blankDraft())
 const message = ref('')
+const datePinned = ref(false)
 
 watch(
   () => props.editing,
@@ -48,7 +50,9 @@ function handleSubmit() {
     message.value = ''
     return
   }
+  const keepDate = datePinned.value ? draft.date : ''
   Object.assign(draft, blankDraft())
+  draft.date = keepDate
   message.value = 'Saved.'
   setTimeout(() => {
     if (message.value === 'Saved.') message.value = ''
@@ -67,7 +71,19 @@ function handleCancel() {
 
     <div class="field">
       <label for="f-date">Date</label>
-      <input id="f-date" v-model="draft.date" type="date" required />
+      <div class="date-row">
+        <input id="f-date" v-model="draft.date" type="date" required />
+        <button
+          type="button"
+          class="pin-btn"
+          :class="{ active: datePinned }"
+          :aria-pressed="datePinned"
+          title="Keep this date after saving, for backfilling several entries at once"
+          @click="datePinned = !datePinned"
+        >
+          📌
+        </button>
+      </div>
     </div>
 
     <div class="field">
@@ -76,6 +92,20 @@ function handleCancel() {
         <option value="">Select an activity type…</option>
         <option v-for="opt in ACTIVITY_OPTIONS" :key="opt" :value="opt">{{ opt }}</option>
       </select>
+    </div>
+
+    <div class="field">
+      <label for="f-site">Site applied on</label>
+      <input
+        id="f-site"
+        v-model="draft.siteAppliedOn"
+        type="text"
+        list="site-options"
+        placeholder="e.g. LinkedIn"
+      />
+      <datalist id="site-options">
+        <option v-for="opt in SITE_OPTIONS" :key="opt" :value="opt" />
+      </datalist>
     </div>
 
     <div class="two-col">
@@ -204,6 +234,33 @@ textarea {
 textarea {
   resize: vertical;
   min-height: 38px;
+}
+.date-row {
+  display: flex;
+  gap: 6px;
+}
+.date-row input {
+  flex: 1;
+}
+.pin-btn {
+  flex: 0 0 auto;
+  width: 38px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--card);
+  cursor: pointer;
+  font-size: 15px;
+  opacity: 0.45;
+  filter: grayscale(1);
+  transition:
+    opacity 0.15s ease,
+    filter 0.15s ease;
+}
+.pin-btn.active {
+  opacity: 1;
+  filter: none;
+  border-color: var(--brass);
+  background: rgba(138, 109, 59, 0.1);
 }
 .form-actions {
   display: flex;

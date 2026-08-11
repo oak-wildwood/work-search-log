@@ -35,6 +35,9 @@ function handleRemove(entry: Entry) {
     </div>
     <div class="date">{{ fmtDate(entry.date) }}</div>
     <div class="row"><span class="label">Activity</span> {{ entry.activity || '—' }}</div>
+    <div v-if="entry.siteAppliedOn" class="row">
+      <span class="label">Site</span> {{ entry.siteAppliedOn }}
+    </div>
     <div class="row"><span class="label">Job sought</span> {{ entry.jobType || '—' }}</div>
     <div class="row"><span class="label">Employer</span> {{ entry.employer || '—' }}</div>
     <div v-if="entry.address" class="row">

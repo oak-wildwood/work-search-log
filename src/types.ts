@@ -2,6 +2,7 @@ export interface Entry {
   id: string
   date: string // yyyy-mm-dd
   activity: string
+  siteAppliedOn: string
   jobType: string
   employer: string
   address: string
@@ -15,6 +16,12 @@ export interface Entry {
 }
 
 export type EntryDraft = Omit<Entry, 'id' | 'createdAt' | 'updatedAt'>
+
+export const SITE_OPTIONS = [
+  'WorkSource WA (worksourcewa.com)',
+  'WorkInTexas.com',
+  'LinkedIn',
+] as const
 
 export const ACTIVITY_OPTIONS = [
   'Applied online for a job',

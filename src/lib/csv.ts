@@ -3,6 +3,7 @@ import type { Entry } from '../types'
 const HEADERS = [
   'Date',
   'Activity',
+  'Site Applied On',
   'Job Type Sought',
   'Employer',
   'Address/Website',
@@ -24,6 +25,7 @@ export function toCsv(entries: Entry[]): string {
       [
         e.date,
         e.activity,
+        e.siteAppliedOn,
         e.jobType,
         e.employer,
         e.address,
