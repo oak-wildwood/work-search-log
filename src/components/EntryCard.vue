@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import type { Entry } from '../types'
 
-defineProps<{
+const props = defineProps<{
   entry: Entry
 }>()
 
@@ -10,6 +11,8 @@ const emit = defineEmits<{
   remove: [id: string]
 }>()
 
+const showDetails = ref(false)
+
 function fmtDate(dateStr: string): string {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', {
     month: 'short',
@@ -17,6 +20,22 @@ function fmtDate(dateStr: string): string {
     year: 'numeric',
   })
 }
+
+const summaryLine = computed(() =>
+  [fmtDate(props.entry.date), props.entry.employer, props.entry.siteAppliedOn]
+    .filter(Boolean)
+    .join(' · '),
+)
+
+const hasDetails = computed(
+  () =>
+    props.entry.jobType ||
+    props.entry.address ||
+    props.entry.phone ||
+    props.entry.contactName ||
+    props.entry.result ||
+    props.entry.notes,
+)
 
 function handleRemove(entry: Entry) {
   if (
@@ -29,27 +48,40 @@ function handleRemove(entry: Entry) {
 
 <template>
   <div class="entry">
-    <div class="entry-actions">
-      <button class="icon-btn" title="Edit" @click="emit('edit', entry)">✎</button>
-      <button class="icon-btn" title="Delete" @click="handleRemove(entry)">✕</button>
+    <div class="entry-row">
+      <span class="activity">{{ entry.activity || '—' }}</span>
+      <div class="entry-actions">
+        <button
+          v-if="hasDetails"
+          class="text-link"
+          type="button"
+          @click="showDetails = !showDetails"
+        >
+          {{ showDetails ? 'Hide' : 'Details' }}
+        </button>
+        <button class="icon-btn" title="Edit" @click="emit('edit', entry)">✎</button>
+        <button class="icon-btn" title="Delete" @click="handleRemove(entry)">✕</button>
+      </div>
     </div>
-    <div class="date">{{ fmtDate(entry.date) }}</div>
-    <div class="row"><span class="label">Activity</span> {{ entry.activity || '—' }}</div>
-    <div v-if="entry.siteAppliedOn" class="row">
-      <span class="label">Site</span> {{ entry.siteAppliedOn }}
+    <div class="summary">{{ summaryLine }}</div>
+
+    <div v-if="showDetails" class="details">
+      <div v-if="entry.jobType" class="row">
+        <span class="label">Job sought</span> {{ entry.jobType }}
+      </div>
+      <div v-if="entry.address" class="row">
+        <span class="label">Address</span> {{ entry.address }}
+      </div>
+      <div v-if="entry.phone" class="row"><span class="label">Phone</span> {{ entry.phone }}</div>
+      <div v-if="entry.contactName" class="row">
+        <span class="label">Contact</span> {{ entry.contactName }}
+        <span v-if="entry.contactMethod">({{ entry.contactMethod }})</span>
+      </div>
+      <div v-if="entry.result" class="row">
+        <span class="label">Result</span> {{ entry.result }}
+      </div>
+      <div v-if="entry.notes" class="row"><span class="label">Notes</span> {{ entry.notes }}</div>
     </div>
-    <div class="row"><span class="label">Job sought</span> {{ entry.jobType || '—' }}</div>
-    <div class="row"><span class="label">Employer</span> {{ entry.employer || '—' }}</div>
-    <div v-if="entry.address" class="row">
-      <span class="label">Address</span> {{ entry.address }}
-    </div>
-    <div v-if="entry.phone" class="row"><span class="label">Phone</span> {{ entry.phone }}</div>
-    <div v-if="entry.contactName" class="row">
-      <span class="label">Contact</span> {{ entry.contactName }}
-      <span v-if="entry.contactMethod">({{ entry.contactMethod }})</span>
-    </div>
-    <div class="row"><span class="label">Result</span> {{ entry.result || '—' }}</div>
-    <div v-if="entry.notes" class="row"><span class="label">Notes</span> {{ entry.notes }}</div>
   </div>
 </template>
 
@@ -59,16 +91,42 @@ function handleRemove(entry: Entry) {
   border: 1px solid var(--line);
   border-left: 3px solid var(--green);
   border-radius: 4px;
-  padding: 12px 14px;
-  margin-bottom: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
   font-size: 13px;
-  line-height: 1.55;
-  position: relative;
+  line-height: 1.5;
+}
+.entry-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.activity {
+  font-weight: 600;
+  color: var(--ink);
+}
+.entry-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.summary {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.details {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
 }
 .row {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  margin-bottom: 3px;
 }
 .label {
   color: var(--brass);
@@ -78,19 +136,16 @@ function handleRemove(entry: Entry) {
   letter-spacing: 0.03em;
   min-width: 78px;
 }
-.date {
-  font-family: var(--font-display);
-  font-weight: 700;
-  color: var(--green-deep);
-  font-size: 14px;
-  margin-bottom: 4px;
-}
-.entry-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  gap: 2px;
+.text-link {
+  background: none;
+  border: none;
+  color: var(--brass);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-decoration: underline;
+  padding: 4px 4px;
+  white-space: nowrap;
 }
 .icon-btn {
   background: none;

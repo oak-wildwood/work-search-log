@@ -74,14 +74,20 @@ function handlePrint() {
 </script>
 
 <template>
-  <div class="toolbar-wrap">
-    <div class="toolbar">
-      <button class="ghost-btn" @click="exportCsv">Export CSV</button>
-      <button class="ghost-btn" @click="exportJson">Backup (JSON)</button>
-      <button class="ghost-btn" @click="triggerImport">Import backup</button>
-      <button class="ghost-btn" @click="handlePrint">Print / save PDF</button>
+  <footer class="app-footer">
+    <p class="footer-note">
+      Keep this for your entire benefit year. TWC may request it for any week, at any time.
+    </p>
+    <div class="footer-row">
+      <nav class="links">
+        <button class="link-btn" type="button" @click="exportCsv">Export CSV</button>
+        <button class="link-btn" type="button" @click="exportJson">Backup</button>
+        <button class="link-btn" type="button" @click="triggerImport">Import backup</button>
+        <button class="link-btn" type="button" @click="handlePrint">Print</button>
+        <button class="link-btn danger" type="button" @click="handleClearAll">Clear all</button>
+      </nav>
+      <span class="privacy">Saved in this browser only</span>
     </div>
-    <button class="danger-link" @click="handleClearAll">Clear all entries</button>
     <input
       ref="fileInput"
       type="file"
@@ -90,46 +96,55 @@ function handlePrint() {
       @change="handleFileChange"
     />
     <p class="status" role="status" aria-live="polite">{{ importMessage }}</p>
-  </div>
+  </footer>
 </template>
 
 <style scoped>
-.toolbar-wrap {
-  margin: 14px 0 0;
+.app-footer {
+  margin-top: 30px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
-.toolbar {
+.footer-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+.footer-row {
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 6px 16px;
 }
-.ghost-btn {
-  flex: 1 1 auto;
-  min-width: 120px;
-  background: transparent;
-  border: 1px solid var(--brass);
-  color: var(--brass);
-  padding: 9px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  border-radius: 3px;
-  cursor: pointer;
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
 }
-.ghost-btn:hover {
-  background: rgba(138, 109, 59, 0.1);
-}
-.danger-link {
-  display: block;
-  margin: 12px auto 0;
+.link-btn {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--brass);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   text-decoration: underline;
   cursor: pointer;
+  padding: 2px 0;
 }
-.danger-link:hover {
+.link-btn:hover {
+  color: var(--green-deep);
+}
+.link-btn.danger {
+  color: var(--muted);
+}
+.link-btn.danger:hover {
   color: var(--warn);
+}
+.privacy {
+  font-size: 11px;
+  color: var(--muted);
 }
 .visually-hidden {
   position: absolute;

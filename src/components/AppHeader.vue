@@ -1,82 +1,95 @@
 <script setup lang="ts">
 import { useTheme } from '../composables/useTheme'
+import { useSettings } from '../composables/useSettings'
 
 const { isDark, toggleTheme } = useTheme()
+const { settings } = useSettings()
 </script>
 
 <template>
   <header>
-    <button
-      class="theme-toggle"
-      :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-      @click="toggleTheme"
-    >
-      {{ isDark ? '☀' : '☾' }}
-    </button>
-    <p class="eyebrow">Texas Workforce Commission · Work Search Record</p>
-    <h1>Work Search Log</h1>
-    <p class="sub">
-      Keep this for your entire benefit year. TWC may request it for any week, at any time.
-    </p>
-    <div class="stamp">Verifiable Record</div>
+    <div class="title-row">
+      <h1>Work Search Log</h1>
+      <span class="eyebrow">Texas Workforce Commission</span>
+    </div>
+    <div class="header-controls">
+      <label class="goal">
+        Goal
+        <input v-model.number="settings.minPerWeek" type="number" min="1" />
+        / wk
+      </label>
+      <button
+        class="theme-toggle"
+        :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+        @click="toggleTheme"
+      >
+        {{ isDark ? '☀' : '☾' }}
+      </button>
+    </div>
   </header>
 </template>
 
 <style scoped>
 header {
-  padding: 28px 20px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding: 20px 20px;
   border-bottom: 3px double var(--brass);
   background: var(--paper-2);
-  position: relative;
 }
-.eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--brass);
-  margin: 0 0 6px;
+.title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 h1 {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 28px;
-  margin: 0 0 4px;
+  font-size: 22px;
+  margin: 0;
   color: var(--green-deep);
   letter-spacing: -0.01em;
 }
-.sub {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 0;
-  line-height: 1.5;
-  max-width: 46ch;
-}
-.stamp {
-  position: absolute;
-  top: 22px;
-  right: 56px;
-  border: 2px solid var(--stamp);
-  color: var(--stamp);
-  padding: 6px 10px;
-  font-size: 10px;
-  letter-spacing: 0.08em;
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  transform: rotate(2deg);
-  border-radius: 3px;
-  font-weight: 600;
-  background: rgba(122, 59, 50, 0.05);
+  color: var(--brass);
 }
-@media (max-width: 480px) {
-  .stamp {
-    display: none;
-  }
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.goal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--brass);
+}
+.goal input {
+  width: 46px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--card);
+  color: var(--ink);
+  text-transform: none;
 }
 .theme-toggle {
-  position: absolute;
-  top: 22px;
-  right: 18px;
   width: 30px;
   height: 30px;
+  flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--card);
