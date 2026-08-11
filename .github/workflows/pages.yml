@@ -1,10 +1,15 @@
 name: Deploy to GitHub Pages
 
 # Requires Settings → Pages → Source → "GitHub Actions" (done once per fork).
+#
+# main and TWC both deploy to the same Pages URL (one GitHub Pages site per repo) —
+# whichever branch you push to most recently is what's live. That's fine while TWC
+# is this repo's actual day-to-day deployment, just don't push main and TWC back to
+# back expecting both to "stick".
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, TWC]
 
 permissions:
   contents: read
