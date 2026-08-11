@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import type { Entry, EntryDraft } from '../types'
 import { ACTIVITY_OPTIONS, CONTACT_METHOD_OPTIONS, RESULT_OPTIONS, SITE_OPTIONS } from '../types'
+
+const OFFLINE_ACTIVITIES = new Set([
+  'Applied in person for a job',
+  'Mailed application or résumé',
+  'Attended job fair / networking event',
+  'Attended employment workshop',
+  'Interview with employer',
+])
 
 const props = defineProps<{
   editing?: Entry | null
@@ -42,6 +50,18 @@ function isKnownSite(value: string): boolean {
 function syncSiteChoice(value: string) {
   siteChoice.value = !value ? '' : isKnownSite(value) ? value : OTHER_SITE
 }
+
+const showSiteField = computed(() => !OFFLINE_ACTIVITIES.has(draft.activity))
+
+watch(
+  () => draft.activity,
+  (activity) => {
+    if (OFFLINE_ACTIVITIES.has(activity)) {
+      draft.siteAppliedOn = ''
+      siteChoice.value = ''
+    }
+  },
+)
 
 watch(siteChoice, (choice) => {
   if (choice !== OTHER_SITE) {
@@ -116,7 +136,7 @@ function handleCancel() {
       </select>
     </div>
 
-    <div class="field">
+    <div v-if="showSiteField" class="field">
       <label for="f-site">Site applied on</label>
       <select id="f-site" v-model="siteChoice">
         <option value="">Select a site…</option>

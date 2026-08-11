@@ -26,8 +26,8 @@ export const SITE_OPTIONS = [
 export const ACTIVITY_OPTIONS = [
   'Applied online for a job',
   'Applied in person for a job',
-  'Registered on WorkInTexas.com / WorkSource',
-  'Searched jobs on WorkInTexas.com / WorkSource',
+  'Registered with a workforce center or job board',
+  'Searched job listings online',
   'Followed up on a job contact',
   'Registered with private employment agency',
   'Mailed application or résumé',
