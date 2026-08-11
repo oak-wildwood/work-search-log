@@ -32,10 +32,30 @@ const draft = reactive<EntryDraft>(blankDraft())
 const message = ref('')
 const datePinned = ref(false)
 
+const OTHER_SITE = '__other__'
+const siteChoice = ref('')
+
+function isKnownSite(value: string): boolean {
+  return (SITE_OPTIONS as readonly string[]).includes(value)
+}
+
+function syncSiteChoice(value: string) {
+  siteChoice.value = !value ? '' : isKnownSite(value) ? value : OTHER_SITE
+}
+
+watch(siteChoice, (choice) => {
+  if (choice !== OTHER_SITE) {
+    draft.siteAppliedOn = choice
+  } else if (isKnownSite(draft.siteAppliedOn)) {
+    draft.siteAppliedOn = ''
+  }
+})
+
 watch(
   () => props.editing,
   (entry) => {
     Object.assign(draft, entry ? { ...entry } : blankDraft())
+    syncSiteChoice(draft.siteAppliedOn)
   },
   { immediate: true },
 )
@@ -53,6 +73,7 @@ function handleSubmit() {
   const keepDate = datePinned.value ? draft.date : ''
   Object.assign(draft, blankDraft())
   draft.date = keepDate
+  siteChoice.value = ''
   message.value = 'Saved.'
   setTimeout(() => {
     if (message.value === 'Saved.') message.value = ''
@@ -61,6 +82,7 @@ function handleSubmit() {
 
 function handleCancel() {
   Object.assign(draft, blankDraft())
+  siteChoice.value = ''
   emit('cancel')
 }
 </script>
@@ -96,16 +118,18 @@ function handleCancel() {
 
     <div class="field">
       <label for="f-site">Site applied on</label>
+      <select id="f-site" v-model="siteChoice">
+        <option value="">Select a site…</option>
+        <option v-for="opt in SITE_OPTIONS" :key="opt" :value="opt">{{ opt }}</option>
+        <option :value="OTHER_SITE">Other…</option>
+      </select>
       <input
-        id="f-site"
+        v-if="siteChoice === OTHER_SITE"
         v-model="draft.siteAppliedOn"
         type="text"
-        list="site-options"
-        placeholder="e.g. LinkedIn"
+        placeholder="Type the site name"
+        class="site-other-input"
       />
-      <datalist id="site-options">
-        <option v-for="opt in SITE_OPTIONS" :key="opt" :value="opt" />
-      </datalist>
     </div>
 
     <div class="two-col">
@@ -208,6 +232,9 @@ h2 {
   letter-spacing: 0.04em;
   color: var(--brass);
   margin-bottom: 3px;
+}
+.site-other-input {
+  margin-top: 6px;
 }
 .two-col {
   display: grid;
