@@ -1,20 +1,21 @@
 # Work Search Log
 
 A small, private log for tracking job-search activity — built to satisfy the kind of work-search
-record the Texas Workforce Commission (TWC) can ask an unemployment claimant to produce, at any
-time, for any week of their benefit year.
+record most U.S. state unemployment agencies can ask a claimant to produce, at any time, for any
+week of their benefit year.
 
 Everything is entered by hand, grouped by week with a "did I hit my required number of activities
 this week" indicator, and exportable as CSV or a JSON backup. There is no server and no account —
 your data lives only in your browser's local storage, on your machine.
 
-> Not affiliated with or endorsed by TWC. It's a personal record-keeping tool shaped by TWC's work
-> search log requirements, not an official form.
+> Not affiliated with or endorsed by any state workforce agency. It's a personal record-keeping
+> tool shaped by the kind of work-search log those agencies typically require, not an official
+> form.
 
 ## Features
 
-- Log activities with the fields TWC's work search log asks for: date, activity type, job sought,
-  employer, contact info, contact method, result, notes
+- Log activities with the fields a typical state work-search log asks for: date, activity type,
+  job sought, employer, contact info, contact method, result, notes
 - Entries grouped by week, each week showing a met/short badge against a configurable required
   count
 - Edit or delete any entry
@@ -41,11 +42,8 @@ npm run preview # serve that build locally to sanity-check it
 
 ## Deploying your own copy
 
-The build is a static site (`dist/`), so any static host works. If you just forked this to use it
-yourself, GitHub Pages needs nothing beyond the repo you already have — no extra account, no
-signup.
-
-### GitHub Pages (no extra account needed)
+The build is a static site (`dist/`), so any static host works, but the simplest path is GitHub
+Pages — it needs nothing beyond the repo you already have, no extra account, no signup.
 
 1. Fork this repo.
 2. In your fork, go to **Settings → Pages**. Under "Build and deployment", set **Source** to
@@ -64,18 +62,12 @@ Every future push to `main` redeploys automatically.
 > workflow hadn't run yet when Pages was first enabled. Push any commit (or re-run the workflow
 > manually) and it self-corrects.
 
-### Vercel
+## Adapting it for your state
 
-Import this repo at [vercel.com/new](https://vercel.com/new) — it's a zero-config Vite app, no
-settings to change. Requires a Vercel account; gives you preview deployments per branch/PR, which
-GitHub Pages doesn't.
-
-## Adapting it for another state
-
-The activity types, result options, and header copy are TWC-specific and live in `src/types.ts`
-and `src/components/AppHeader.vue`. Every other state runs its own work-search-record requirements
-— edit those two spots to match yours; the rest of the app (storage, weekly grouping, exports)
-doesn't know or care which state it's for.
+The activity types, result options, site list, and header copy are intentionally generic and live
+in `src/types.ts` and `src/components/AppHeader.vue`. Every state runs its own work-search-record
+requirements — edit those two spots to match yours; the rest of the app (storage, weekly grouping,
+exports) doesn't know or care which state it's for.
 
 ## Tech stack
 

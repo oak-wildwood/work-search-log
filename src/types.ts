@@ -18,9 +18,11 @@ export interface Entry {
 export type EntryDraft = Omit<Entry, 'id' | 'createdAt' | 'updatedAt'>
 
 export const SITE_OPTIONS = [
-  'WorkSource WA (worksourcewa.com)',
-  'WorkInTexas.com',
+  'State workforce agency job board',
   'LinkedIn',
+  'Indeed',
+  'ZipRecruiter',
+  'Company website',
 ] as const
 
 export const ACTIVITY_OPTIONS = [

@@ -76,7 +76,8 @@ function handlePrint() {
 <template>
   <footer class="app-footer">
     <p class="footer-note">
-      Keep this for your entire benefit year. TWC may request it for any week, at any time.
+      Keep this for your entire benefit year. Your state workforce agency may request it for any
+      week, at any time.
     </p>
     <div class="footer-row">
       <nav class="links">

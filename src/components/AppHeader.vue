@@ -10,7 +10,7 @@ const { settings } = useSettings()
   <header>
     <div class="title-row">
       <h1>Work Search Log</h1>
-      <span class="eyebrow">Texas Workforce Commission</span>
+      <span class="eyebrow">Work Search Activity Record</span>
     </div>
     <div class="header-controls">
       <label class="goal">
