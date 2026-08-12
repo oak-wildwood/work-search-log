@@ -63,13 +63,17 @@ function startEdit(entry: Entry) {
 function cancelEdit() {
   editingEntry.value = null
 }
+
+function handlePrint() {
+  window.print()
+}
 </script>
 
 <template>
   <AppHeader />
 
   <main>
-    <p v-if="saveError" class="save-error" role="alert">
+    <p v-if="saveError" class="save-error no-print" role="alert">
       Your browser is blocking local storage, so changes here won't be saved. Try leaving private
       browsing mode, or export a backup after each session.
     </p>
@@ -93,17 +97,41 @@ function cancelEdit() {
       </div>
     </section>
 
-    <div id="entry-form">
+    <div id="entry-form" class="no-print">
       <EntryForm :editing="editingEntry" @submit="handleSubmit" @cancel="cancelEdit" />
     </div>
 
     <div class="history-head">
       <span class="history-label">History</span>
-      <span class="history-total">{{ entries.length }} total</span>
+      <div class="history-head-right">
+        <span class="history-total">{{ entries.length }} total</span>
+        <button
+          class="print-btn no-print"
+          type="button"
+          title="Print work search log"
+          aria-label="Print work search log"
+          @click="handlePrint"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div id="weeks">
-      <EmptyState v-if="entries.length === 0" />
+      <EmptyState v-if="entries.length === 0" class="no-print" />
       <WeekGroup
         v-for="(group, index) in weeks"
         :key="group.key"
@@ -198,7 +226,7 @@ main {
 .history-head {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   border-bottom: 1px solid var(--line);
   padding-bottom: 6px;
   margin: 8px 0 14px;
@@ -209,8 +237,40 @@ main {
   text-transform: uppercase;
   color: var(--brass);
 }
+.history-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .history-total {
   font-size: 12px;
   color: var(--muted);
+}
+.print-btn {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--brass);
+  cursor: pointer;
+}
+.print-btn:hover {
+  border-color: var(--brass);
+  color: var(--green-deep);
+}
+
+@media print {
+  .history-head {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .this-week {
+    display: none;
+  }
 }
 </style>

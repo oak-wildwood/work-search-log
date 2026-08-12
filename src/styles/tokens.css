@@ -48,3 +48,34 @@ body {
   color: var(--ink);
   font-family: var(--font-mono);
 }
+
+@media print {
+  :root,
+  :root[data-theme='dark'] {
+    --ink: #000;
+    --paper: #fff;
+    --paper-2: #fff;
+    --card: #fff;
+    --line: #999;
+    --brass: #333;
+    --green: #000;
+    --green-deep: #000;
+    --ok: #000;
+    --warn: #000;
+    --muted: #333;
+    --shadow: transparent;
+  }
+
+  body {
+    background: #fff;
+    background-image: none;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  @page {
+    margin: 0.6in 0.5in;
+  }
+}

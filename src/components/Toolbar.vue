@@ -67,14 +67,10 @@ function handleClearAll() {
     emit('clear-all')
   }
 }
-
-function handlePrint() {
-  window.print()
-}
 </script>
 
 <template>
-  <footer class="app-footer">
+  <footer class="app-footer no-print">
     <p class="footer-note">
       Keep this for your entire benefit year. TWC may request it for any week, at any time.
     </p>
@@ -83,7 +79,6 @@ function handlePrint() {
         <button class="link-btn" type="button" @click="exportCsv">Export CSV</button>
         <button class="link-btn" type="button" @click="exportJson">Backup</button>
         <button class="link-btn" type="button" @click="triggerImport">Import backup</button>
-        <button class="link-btn" type="button" @click="handlePrint">Print</button>
         <button class="link-btn danger" type="button" @click="handleClearAll">Clear all</button>
       </nav>
       <span class="privacy">Saved in this browser only</span>

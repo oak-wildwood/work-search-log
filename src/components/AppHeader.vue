@@ -12,7 +12,7 @@ const { settings } = useSettings()
       <h1>Work Search Log</h1>
       <span class="eyebrow">Texas Workforce Commission</span>
     </div>
-    <div class="header-controls">
+    <div class="header-controls no-print">
       <label class="goal">
         Goal
         <input v-model.number="settings.minPerWeek" type="number" min="1" />
@@ -100,5 +100,13 @@ h1 {
 }
 .theme-toggle:hover {
   border-color: var(--brass);
+}
+
+@media print {
+  header {
+    border-bottom: 2px solid #000;
+    background: none;
+    padding: 0 0 12px;
+  }
 }
 </style>
