@@ -24,7 +24,7 @@ const expanded = ref(props.defaultExpanded)
 </script>
 
 <template>
-  <div class="week-block" :class="{ 'is-expanded': expanded }">
+  <div class="week-block">
     <button class="week-head" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
       <span class="caret">{{ expanded ? '▾' : '▸' }}</span>
       <span class="week-title">{{ fmtDate(group.start) }} – {{ fmtDate(group.end) }}</span>
@@ -37,7 +37,7 @@ const expanded = ref(props.defaultExpanded)
         </span>
       </span>
     </button>
-    <TransitionGroup v-if="expanded" name="entry" tag="div">
+    <TransitionGroup v-show="expanded" class="week-entries" name="entry" tag="div">
       <EntryCard
         v-for="entry in group.entries"
         :key="entry.id"
@@ -122,8 +122,8 @@ const expanded = ref(props.defaultExpanded)
 }
 
 @media print {
-  .week-block:not(.is-expanded) {
-    display: none;
+  .week-entries {
+    display: block !important;
   }
   .week-head {
     cursor: default;
