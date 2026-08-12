@@ -24,7 +24,7 @@ const expanded = ref(props.defaultExpanded)
 </script>
 
 <template>
-  <div class="week-block">
+  <div class="week-block" :class="{ 'is-expanded': expanded }">
     <button class="week-head" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
       <span class="caret">{{ expanded ? '▾' : '▸' }}</span>
       <span class="week-title">{{ fmtDate(group.start) }} – {{ fmtDate(group.end) }}</span>
@@ -119,5 +119,19 @@ const expanded = ref(props.defaultExpanded)
 .entry-leave-active {
   position: absolute;
   width: calc(100% - 2px);
+}
+
+@media print {
+  .week-block:not(.is-expanded) {
+    display: none;
+  }
+  .week-head {
+    cursor: default;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .caret {
+    display: none;
+  }
 }
 </style>

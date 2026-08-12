@@ -161,4 +161,14 @@ function handleRemove(entry: Entry) {
   color: var(--warn);
   background: rgba(162, 71, 47, 0.08);
 }
+
+@media print {
+  .entry {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .entry-actions {
+    display: none;
+  }
+}
 </style>
