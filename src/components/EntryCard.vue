@@ -37,6 +37,10 @@ const hasDetails = computed(
     props.entry.notes,
 )
 
+function toggleDetails() {
+  showDetails.value = !showDetails.value
+}
+
 function handleRemove(entry: Entry) {
   if (
     confirm(`Delete the ${fmtDate(entry.date)} entry for ${entry.employer || 'this activity'}?`)
@@ -47,25 +51,22 @@ function handleRemove(entry: Entry) {
 </script>
 
 <template>
-  <div class="entry">
+  <div class="entry" :class="{ clickable: hasDetails }" @click="hasDetails && toggleDetails()">
     <div class="entry-row">
       <span class="activity">{{ entry.activity || '—' }}</span>
       <div class="entry-actions">
-        <button
-          v-if="hasDetails"
-          class="text-link"
-          type="button"
-          @click="showDetails = !showDetails"
-        >
+        <!-- Kept as a real button so the card stays keyboard-operable; the
+             card-wide click is a convenience on top of it, not a replacement. -->
+        <button v-if="hasDetails" class="text-link" type="button" @click.stop="toggleDetails">
           {{ showDetails ? 'Hide' : 'Details' }}
         </button>
-        <button class="icon-btn" title="Edit" @click="emit('edit', entry)">✎</button>
-        <button class="icon-btn" title="Delete" @click="handleRemove(entry)">✕</button>
+        <button class="icon-btn" title="Edit" @click.stop="emit('edit', entry)">✎</button>
+        <button class="icon-btn" title="Delete" @click.stop="handleRemove(entry)">✕</button>
       </div>
     </div>
     <div class="summary">{{ summaryLine }}</div>
 
-    <div v-if="showDetails" class="details">
+    <div v-if="hasDetails" v-show="showDetails" class="details">
       <div v-if="entry.jobType" class="row">
         <span class="label">Job sought</span> {{ entry.jobType }}
       </div>
@@ -95,6 +96,12 @@ function handleRemove(entry: Entry) {
   margin-bottom: 8px;
   font-size: 13px;
   line-height: 1.5;
+}
+.entry.clickable {
+  cursor: pointer;
+}
+.entry.clickable:hover {
+  border-color: var(--brass);
 }
 .entry-row {
   display: flex;
@@ -169,6 +176,11 @@ function handleRemove(entry: Entry) {
   }
   .entry-actions {
     display: none;
+  }
+  /* The printed log is the full record, so every entry's details print whether
+     or not it was expanded on screen. */
+  .details {
+    display: block !important;
   }
 }
 </style>
