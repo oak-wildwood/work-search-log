@@ -40,6 +40,16 @@ describe('weekStartDate', () => {
     expect(start.getMonth()).toBe(7) // August, 0-indexed
     expect(start.getDate()).toBe(30)
   })
+
+  it('honours a non-Sunday week start', () => {
+    // Monday-start week: Sunday belongs to the week that began the day before.
+    const fromSunday = weekStartDate('2026-08-09', 1)
+    expect(fromSunday.getDay()).toBe(1)
+    expect(fromSunday.getDate()).toBe(3)
+
+    const fromWednesday = weekStartDate('2026-08-12', 1)
+    expect(fromWednesday.getDate()).toBe(10)
+  })
 })
 
 describe('groupByWeek', () => {
@@ -67,5 +77,11 @@ describe('groupByWeek', () => {
     const entries = [makeEntry('2026-08-10'), makeEntry('2026-08-12'), makeEntry('2026-08-11')]
     const groups = groupByWeek(entries)
     expect(groups[0].entries.map((e) => e.date)).toEqual(['2026-08-12', '2026-08-11', '2026-08-10'])
+  })
+
+  it('splits weeks on the configured start day', () => {
+    const entries = [makeEntry('2026-08-09'), makeEntry('2026-08-10')] // Sunday, Monday
+    expect(groupByWeek(entries, 0)).toHaveLength(1)
+    expect(groupByWeek(entries, 1)).toHaveLength(2)
   })
 })

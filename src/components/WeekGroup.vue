@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { WeekGroup } from '../lib/weeks'
+import type { WeekStatus } from '../lib/requirements'
 import type { Entry } from '../types'
 import EntryCard from './EntryCard.vue'
 
 const props = defineProps<{
   group: WeekGroup
-  minPerWeek: number
+  status?: WeekStatus
   defaultExpanded: boolean
 }>()
 
@@ -19,7 +20,26 @@ function fmtDate(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-const isOk = computed(() => props.group.entries.length >= props.minPerWeek)
+const badgeClass = computed(() => {
+  switch (props.status?.outcome) {
+    case 'met':
+      return 'ok'
+    case 'short':
+      return 'warn'
+    default:
+      return 'neutral'
+  }
+})
+
+/** No requirement on file means no verdict — the badge shows the count and nothing more. */
+const badgeText = computed(() => {
+  const status = props.status
+  if (!status) return `${props.group.entries.length}`
+  if (status.outcome === 'exempt') return 'Exempt'
+  if (status.required === null) return `${status.counted}`
+  return `${status.counted} / ${status.required}`
+})
+
 const expanded = ref(props.defaultExpanded)
 </script>
 
@@ -32,12 +52,26 @@ const expanded = ref(props.defaultExpanded)
         <span class="week-activity-count">
           {{ group.entries.length }} {{ group.entries.length === 1 ? 'activity' : 'activities' }}
         </span>
-        <span class="week-count" :class="isOk ? 'ok' : 'warn'">
-          {{ group.entries.length }} / {{ minPerWeek }}
-        </span>
+        <span class="week-count" :class="badgeClass">{{ badgeText }}</span>
       </span>
     </button>
-    <TransitionGroup v-show="expanded" class="week-entries" name="entry" tag="div">
+
+    <p v-if="status?.exemptReason" class="week-note">Exempt — {{ status.exemptReason }}</p>
+    <p
+      v-if="status?.minEmployerContacts"
+      class="week-note week-note-scoring"
+      :class="{ warn: status.employerContacts < status.minEmployerContacts }"
+    >
+      {{ status.employerContacts }} of {{ status.minEmployerContacts }} required employer contacts
+    </p>
+    <p
+      v-for="notice in status?.notices ?? []"
+      :key="notice"
+      class="week-note week-note-scoring warn"
+    >
+      {{ notice }}
+    </p>
+    <div v-show="expanded" class="week-entries">
       <EntryCard
         v-for="entry in group.entries"
         :key="entry.id"
@@ -45,7 +79,7 @@ const expanded = ref(props.defaultExpanded)
         @edit="$emit('edit', $event)"
         @remove="$emit('remove', $event)"
       />
-    </TransitionGroup>
+    </div>
   </div>
 </template>
 
@@ -104,24 +138,21 @@ const expanded = ref(props.defaultExpanded)
   border-color: var(--warn);
   background: rgba(162, 71, 47, 0.08);
 }
-.entry-move,
-.entry-enter-active,
-.entry-leave-active {
-  transition:
-    transform 0.2s ease,
-    opacity 0.2s ease;
+.week-count.neutral {
+  color: var(--muted);
 }
-.entry-enter-from,
-.entry-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
+.week-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin: -4px 0 8px;
+  line-height: 1.5;
 }
-.entry-leave-active {
-  position: absolute;
-  width: calc(100% - 2px);
+.week-note.warn {
+  color: var(--warn);
 }
-
 @media print {
+  /* Every week prints in full, whatever was expanded on screen. `v-show` sets an
+     inline display:none, which a stylesheet !important still overrides. */
   .week-entries {
     display: block !important;
   }
@@ -131,6 +162,15 @@ const expanded = ref(props.defaultExpanded)
     page-break-after: avoid;
   }
   .caret {
+    display: none;
+  }
+  /* This app's scoring stays off the printed sheet. The counted-vs-required badge
+     and the cap warnings are our reading of the rules, and printing them would
+     assert to an agency that one of the claimant's own activities shouldn't
+     count. The activity list is the record; the verdict is theirs to reach.
+     An exempt week keeps its reason, which explains a gap rather than judging it. */
+  .week-count,
+  .week-note-scoring {
     display: none;
   }
 }

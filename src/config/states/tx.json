@@ -1,0 +1,120 @@
+{
+  "code": "TX",
+  "agency_name": "Texas Workforce Commission",
+  "agency_short": "TWC",
+
+  "week_start_day": 0,
+  "requirement_source": "county",
+  "jurisdiction_label": "County",
+  "claim_id_label": "Claim number",
+  "has_online_logging": false,
+
+  "activity_types": [
+    { "id": "apply_online", "label": "Applied online for a job", "counts_as": "employer_contact" },
+    {
+      "id": "apply_person",
+      "label": "Applied in person for a job",
+      "counts_as": "employer_contact",
+      "offline": true
+    },
+    {
+      "id": "interview",
+      "label": "Interview with employer",
+      "counts_as": "employer_contact",
+      "offline": true
+    },
+    {
+      "id": "job_fair",
+      "label": "Attended job fair / networking event",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "workshop",
+      "label": "Attended employment workshop",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "apply_mail",
+      "label": "Mailed application or résumé",
+      "counts_as": "employer_contact",
+      "offline": true
+    },
+    {
+      "id": "follow_up",
+      "label": "Followed up on a job contact",
+      "counts_as": "employer_contact"
+    },
+    {
+      "id": "search_listings",
+      "label": "Searched job listings online",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "resume_upload",
+      "label": "Posted résumé to a job board",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "private_agency",
+      "label": "Registered with private employment agency",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "reemployment_services",
+      "label": "Used Workforce Solutions reemployment services",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "reemployment_plan",
+      "label": "Created a reemployment plan",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "registration",
+      "label": "Registered with a workforce center or job board",
+      "counts_as": "registration"
+    },
+    { "id": "other", "label": "Other reemployment activity", "counts_as": "approved_activity" }
+  ],
+
+  "contact_methods": ["In person", "Online", "Email", "Phone", "Fax", "Mail", "Other"],
+  "result_options": [
+    "Application submitted",
+    "Résumé sent",
+    "Interviewed",
+    "Hired",
+    "Not hired",
+    "No reply",
+    "Other"
+  ],
+  "site_options": ["WorkInTexas.com", "LinkedIn", "Indeed", "ZipRecruiter", "Company website"],
+
+  "required_fields": [
+    "date",
+    "activity_type",
+    "job_sought",
+    "employer_name",
+    "employer_contact_info",
+    "employer_phone",
+    "contact_name",
+    "contact_method",
+    "result"
+  ],
+
+  "duplicate_employer_counts": false,
+  "retention": "for your entire benefit year",
+
+  "official_log_url": "https://www.twc.texas.gov/sites/default/files/ui/docs/work-search-log-twc.pdf",
+  "rules_url": "https://www.twc.texas.gov/work-search",
+  "requirement_lookup_url": "https://www.twc.texas.gov/programs/unemployment-benefits/required-number-work-search-activities-county",
+  "submission": {
+    "portal_url": "https://mft.twc.texas.gov/form/UIsubmissionENG",
+    "accepts_mail": true,
+    "accepts_fax": true
+  },
+
+  "last_verified": "2026-08-19"
+}

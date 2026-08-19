@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { Entry } from '../types'
 import { toCsv } from '../lib/csv'
 import { parseBackupJson, toBackupJson } from '../lib/backup'
+import { useStateConfig } from '../composables/useStateConfig'
 
 const props = defineProps<{
   entries: Entry[]
@@ -15,6 +16,11 @@ const emit = defineEmits<{
 
 const fileInput = ref<HTMLInputElement>()
 const importMessage = ref('')
+
+// How long a record must be kept varies by state, so it comes from the config
+// rather than being asserted in the markup.
+const { config } = useStateConfig()
+const retention = computed(() => config.value.retention)
 
 function downloadBlob(content: string, filename: string, type: string) {
   const blob = new Blob([content], { type })
@@ -72,8 +78,8 @@ function handleClearAll() {
 <template>
   <footer class="app-footer no-print">
     <p class="footer-note">
-      Keep this for your entire benefit year. Your state workforce agency may request it for any
-      week, at any time.
+      Keep this {{ retention }}. Your state workforce agency may request it for any week, at any
+      time.
     </p>
     <div class="footer-row">
       <nav class="links">

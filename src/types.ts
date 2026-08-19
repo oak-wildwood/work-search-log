@@ -1,6 +1,12 @@
 export interface Entry {
   id: string
   date: string // yyyy-mm-dd
+  /**
+   * The activity type's id in the state config it was logged under. Absent on
+   * entries logged before ids existed; those fall back to matching on `activity`.
+   */
+  activityId?: string
+  /** Label snapshot, kept verbatim so a config change never rewrites history. */
   activity: string
   siteAppliedOn: string
   jobType: string
@@ -16,44 +22,3 @@ export interface Entry {
 }
 
 export type EntryDraft = Omit<Entry, 'id' | 'createdAt' | 'updatedAt'>
-
-export const SITE_OPTIONS = [
-  'State workforce agency job board',
-  'LinkedIn',
-  'Indeed',
-  'ZipRecruiter',
-  'Company website',
-] as const
-
-export const ACTIVITY_OPTIONS = [
-  'Applied online for a job',
-  'Applied in person for a job',
-  'Registered with a workforce center or job board',
-  'Searched job listings online',
-  'Followed up on a job contact',
-  'Registered with private employment agency',
-  'Mailed application or résumé',
-  'Attended job fair / networking event',
-  'Attended employment workshop',
-  'Interview with employer',
-  'Other reemployment activity',
-] as const
-
-export const RESULT_OPTIONS = [
-  'Submitted application',
-  'Sent résumé',
-  'Interviewed',
-  'Hired',
-  'Not hired',
-  'No reply yet',
-  'Other',
-] as const
-
-export const CONTACT_METHOD_OPTIONS = [
-  'In person',
-  'Phone',
-  'Email',
-  'Fax',
-  'Online / website',
-  'Mail',
-] as const

@@ -1,0 +1,96 @@
+{
+  "code": "GENERIC_US",
+  "agency_name": "your state workforce agency",
+  "agency_short": "your state agency",
+
+  "week_start_day": 0,
+  "requirement_source": "letter",
+  "jurisdiction_label": "Local office / area",
+  "claim_id_label": "Claim number",
+  "has_online_logging": false,
+
+  "activity_types": [
+    { "id": "apply_online", "label": "Applied online for a job", "counts_as": "employer_contact" },
+    {
+      "id": "apply_person",
+      "label": "Applied in person for a job",
+      "counts_as": "employer_contact",
+      "offline": true
+    },
+    {
+      "id": "apply_mail",
+      "label": "Mailed application or résumé",
+      "counts_as": "employer_contact",
+      "offline": true
+    },
+    {
+      "id": "interview",
+      "label": "Interview with employer",
+      "counts_as": "employer_contact",
+      "offline": true
+    },
+    { "id": "follow_up", "label": "Followed up on a job contact", "counts_as": "employer_contact" },
+    {
+      "id": "search_listings",
+      "label": "Searched job listings online",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "job_fair",
+      "label": "Attended job fair / networking event",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "workshop",
+      "label": "Attended employment workshop",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "resume_upload",
+      "label": "Posted résumé to a job board",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "private_agency",
+      "label": "Registered with private employment agency",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "registration",
+      "label": "Registered with a workforce center or job board",
+      "counts_as": "registration"
+    },
+    { "id": "other", "label": "Other reemployment activity", "counts_as": "approved_activity" }
+  ],
+
+  "contact_methods": ["In person", "Online / website", "Email", "Phone", "Fax", "Mail", "Other"],
+  "result_options": [
+    "Submitted application",
+    "Sent résumé",
+    "Interviewed",
+    "Hired",
+    "Not hired",
+    "No reply yet",
+    "Other"
+  ],
+  "site_options": [
+    "State workforce agency job board",
+    "LinkedIn",
+    "Indeed",
+    "ZipRecruiter",
+    "Company website"
+  ],
+
+  "required_fields": ["date", "activity_type"],
+
+  "duplicate_employer_counts": true,
+  "retention": "for your entire benefit year",
+
+  "official_log_url": null,
+  "rules_url": null,
+  "submission": null,
+
+  "last_verified": null
+}

@@ -8,25 +8,29 @@ export interface WeekGroup {
 }
 
 /** Local (not UTC) yyyy-mm-dd, so this never shifts a date across timezones. */
-function toLocalISODate(d: Date): string {
+export function toLocalISODate(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
 
-/** Sunday that starts the week containing this yyyy-mm-dd date string. */
-export function weekStartDate(dateStr: string): Date {
+/**
+ * Start of the week containing this yyyy-mm-dd date string. `weekStartDay` is
+ * 0 = Sunday, which is what most states use.
+ */
+export function weekStartDate(dateStr: string, weekStartDay = 0): Date {
   const d = new Date(`${dateStr}T00:00:00`)
-  d.setDate(d.getDate() - d.getDay())
+  const offset = (d.getDay() - weekStartDay + 7) % 7
+  d.setDate(d.getDate() - offset)
   return d
 }
 
-export function groupByWeek(entries: Entry[]): WeekGroup[] {
+export function groupByWeek(entries: Entry[], weekStartDay = 0): WeekGroup[] {
   const groups = new Map<string, WeekGroup>()
 
   for (const entry of entries) {
-    const start = weekStartDate(entry.date)
+    const start = weekStartDate(entry.date, weekStartDay)
     const key = toLocalISODate(start)
     let group = groups.get(key)
     if (!group) {
