@@ -79,3 +79,21 @@ body {
     margin: 0.6in 0.5in;
   }
 }
+
+/*
+ * Screen-vs-print visibility, kept together and both scoped to `screen` so the
+ * printed sheet is the default rather than a set of overrides.
+ *
+ * `.collapsed` replaces `v-show` on anything that folds away: collapsing is a
+ * screen affordance, while the printed record is always complete. An inline
+ * style would instead need a `display: block !important` override in every
+ * component that collapses something.
+ *
+ * `.print-only` is the complement of `.no-print` above.
+ */
+@media screen {
+  .collapsed,
+  .print-only {
+    display: none;
+  }
+}

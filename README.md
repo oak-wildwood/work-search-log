@@ -57,6 +57,11 @@ Pages — it needs nothing beyond the repo you already have, no extra account, n
 
 Every future push to `main` redeploys automatically.
 
+You don't need a branch of your own to use this for a particular state. Which state the app follows
+is a runtime choice stored in your browser, not something baked into the build, so the deployed copy
+works for whoever opens it — including you. Your entries stay in your browser; there's no server to
+share them with anyone.
+
 > If Pages ever serves a blank page with a 404 for `/src/main.ts` in the console, GitHub fell back
 > to its own generic deploy instead of running this repo's workflow — usually because the
 > workflow hadn't run yet when Pages was first enabled. Push any commit (or re-run the workflow
@@ -64,10 +69,34 @@ Every future push to `main` redeploys automatically.
 
 ## Adapting it for your state
 
-The activity types, result options, site list, and header copy are intentionally generic and live
-in `src/types.ts` and `src/components/AppHeader.vue`. Every state runs its own work-search-record
-requirements — edit those two spots to match yours; the rest of the app (storage, weekly grouping,
-exports) doesn't know or care which state it's for.
+Everything state-specific lives in a JSON file under `src/config/states/` — activity types and how
+each one counts, result options, contact methods, which fields the state's log asks for, which day
+its week starts on, and where its rules are published. Pick your state from the header; anything
+without a bundled config falls back to `generic-us.json`, so the tool still works in all 50 states.
+
+Two states ship with real configs, verified against the agency's own published rules:
+
+- **Texas** (TWC) — weekly count varies by county, so the app asks for yours
+- **Washington** (ESD) — fixed statewide count, much larger activity taxonomy
+
+Both are states where you keep your own log and produce it if the agency asks. Some states instead
+make you enter work search in their portal before you can file a weekly claim, which makes a tool
+like this a personal backup copy rather than the record itself.
+
+**Forking is the expected path here** — writing a config for your own state is usually the only
+change needed, and it's yours to keep. PRs aren't closed off, just slow. See
+[CONTRIBUTING.md](./CONTRIBUTING.md) for the config format.
+
+The required number of activities per week is only in a config where the state actually fixes one
+for everybody — Washington's 3 is statewide, so it's offered as a starting value. Texas sets it per
+county, so the app asks instead, and links you to TWC's county table. Either way your determination
+letter is the authority and always wins. The number is recorded with the date it took effect, so if
+it changes mid-claim, weeks you already logged are still scored against the number that applied
+then.
+
+On first run a short setup step asks your name, your state, and that weekly number. It's reachable
+afterwards from **Preferences** in the header. Nothing is sent anywhere, and the app never asks for
+a Social Security number — a browser-only app has nowhere safe to keep one.
 
 ## Tech stack
 
@@ -76,8 +105,9 @@ no state-management library — a couple of small composables over `localStorage
 
 ```
 src/
-  lib/          pure functions: localStorage wrapper, weekly grouping, CSV, JSON backup
-  composables/  reactive stores built on lib/ (entries, settings, theme)
+  config/       per-state JSON rules, plus the loader that validates and resolves them
+  lib/          pure functions: localStorage wrapper, weekly grouping, requirement scoring, CSV, JSON backup
+  composables/  reactive stores built on lib/ (entries, settings, state config, theme)
   components/   presentational Vue components
 ```
 

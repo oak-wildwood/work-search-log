@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import type { Entry, EntryDraft } from '../types'
-import { ACTIVITY_OPTIONS, CONTACT_METHOD_OPTIONS, RESULT_OPTIONS, SITE_OPTIONS } from '../types'
+import { useStateConfig } from '../composables/useStateConfig'
+import { resolveActivity } from '../config'
 
-const OFFLINE_ACTIVITIES = new Set([
-  'Applied in person for a job',
-  'Mailed application or résumé',
-  'Attended job fair / networking event',
-  'Attended employment workshop',
-  'Interview with employer',
-])
+const { config } = useStateConfig()
 
 const props = defineProps<{
   editing?: Entry | null
@@ -23,6 +18,7 @@ const emit = defineEmits<{
 function blankDraft(): EntryDraft {
   return {
     date: '',
+    activityId: '',
     activity: '',
     siteAppliedOn: '',
     jobType: '',
@@ -42,27 +38,32 @@ const datePinned = ref(false)
 const showMoreFields = ref(false)
 
 const OTHER_SITE = '__other__'
+/** Stands in for an activity label that no longer maps to a type in the current config. */
+const LEGACY_ACTIVITY = '__legacy__'
+
 const siteChoice = ref('')
+const legacyActivityLabel = ref('')
 
 function isKnownSite(value: string): boolean {
-  return (SITE_OPTIONS as readonly string[]).includes(value)
+  return config.value.siteOptions.includes(value)
 }
 
 function syncSiteChoice(value: string) {
   siteChoice.value = !value ? '' : isKnownSite(value) ? value : OTHER_SITE
 }
 
-const showSiteField = computed(() => !OFFLINE_ACTIVITIES.has(draft.activity))
-
-watch(
-  () => draft.activity,
-  (activity) => {
-    if (OFFLINE_ACTIVITIES.has(activity)) {
-      draft.siteAppliedOn = ''
-      siteChoice.value = ''
-    }
-  },
+const selectedActivity = computed(
+  () => config.value.activityTypes.find((a) => a.id === draft.activityId) ?? null,
 )
+
+const showSiteField = computed(() => !selectedActivity.value?.offline)
+
+watch(selectedActivity, (activity) => {
+  if (activity?.offline) {
+    draft.siteAppliedOn = ''
+    siteChoice.value = ''
+  }
+})
 
 watch(siteChoice, (choice) => {
   if (choice !== OTHER_SITE) {
@@ -77,16 +78,34 @@ watch(
   (entry) => {
     Object.assign(draft, entry ? { ...entry } : blankDraft())
     syncSiteChoice(draft.siteAppliedOn)
+    // An entry logged under a different config keeps its original label rather than
+    // being silently reassigned or blanked.
+    const resolved = entry ? resolveActivity(config.value, entry) : null
+    if (resolved) {
+      draft.activityId = resolved.id
+      legacyActivityLabel.value = ''
+    } else if (entry?.activity) {
+      draft.activityId = LEGACY_ACTIVITY
+      legacyActivityLabel.value = entry.activity
+    } else {
+      draft.activityId = ''
+      legacyActivityLabel.value = ''
+    }
   },
   { immediate: true },
 )
 
 function handleSubmit() {
-  if (!draft.date || !draft.activity) {
+  if (!draft.date || !draft.activityId) {
     message.value = 'Date and activity are required.'
     return
   }
-  emit('submit', { ...draft })
+  const keepingLegacy = draft.activityId === LEGACY_ACTIVITY
+  emit('submit', {
+    ...draft,
+    activityId: keepingLegacy ? '' : draft.activityId,
+    activity: keepingLegacy ? legacyActivityLabel.value : (selectedActivity.value?.label ?? ''),
+  })
   if (props.editing) {
     message.value = ''
     return
@@ -95,6 +114,7 @@ function handleSubmit() {
   Object.assign(draft, blankDraft())
   draft.date = keepDate
   siteChoice.value = ''
+  legacyActivityLabel.value = ''
   message.value = 'Saved.'
   setTimeout(() => {
     if (message.value === 'Saved.') message.value = ''
@@ -104,6 +124,7 @@ function handleSubmit() {
 function handleCancel() {
   Object.assign(draft, blankDraft())
   siteChoice.value = ''
+  legacyActivityLabel.value = ''
   emit('cancel')
 }
 </script>
@@ -136,9 +157,14 @@ function handleCancel() {
       </div>
       <div class="field">
         <label for="f-activity">What you did</label>
-        <select id="f-activity" v-model="draft.activity" required>
+        <select id="f-activity" v-model="draft.activityId" required>
           <option value="">Select an activity type…</option>
-          <option v-for="opt in ACTIVITY_OPTIONS" :key="opt" :value="opt">{{ opt }}</option>
+          <option v-for="opt in config.activityTypes" :key="opt.id" :value="opt.id">
+            {{ opt.label }}
+          </option>
+          <option v-if="legacyActivityLabel" :value="LEGACY_ACTIVITY">
+            {{ legacyActivityLabel }} (as logged)
+          </option>
         </select>
       </div>
     </div>
@@ -148,7 +174,7 @@ function handleCancel() {
         <label for="f-site">Site or source</label>
         <select id="f-site" v-model="siteChoice">
           <option value="">Select a site…</option>
-          <option v-for="opt in SITE_OPTIONS" :key="opt" :value="opt">{{ opt }}</option>
+          <option v-for="opt in config.siteOptions" :key="opt" :value="opt">{{ opt }}</option>
           <option :value="OTHER_SITE">Other…</option>
         </select>
         <input
@@ -163,7 +189,7 @@ function handleCancel() {
         <label for="f-result">Result</label>
         <select id="f-result" v-model="draft.result">
           <option value="">Select result…</option>
-          <option v-for="opt in RESULT_OPTIONS" :key="opt" :value="opt">{{ opt }}</option>
+          <option v-for="opt in config.resultOptions" :key="opt" :value="opt">{{ opt }}</option>
         </select>
       </div>
     </div>
@@ -171,7 +197,7 @@ function handleCancel() {
       <label for="f-result">Result</label>
       <select id="f-result" v-model="draft.result">
         <option value="">Select result…</option>
-        <option v-for="opt in RESULT_OPTIONS" :key="opt" :value="opt">{{ opt }}</option>
+        <option v-for="opt in config.resultOptions" :key="opt" :value="opt">{{ opt }}</option>
       </select>
     </div>
 
@@ -224,7 +250,7 @@ function handleCancel() {
           <label for="f-method">Contact method</label>
           <select id="f-method" v-model="draft.contactMethod">
             <option value="">Select method…</option>
-            <option v-for="opt in CONTACT_METHOD_OPTIONS" :key="opt" :value="opt">
+            <option v-for="opt in config.contactMethods" :key="opt" :value="opt">
               {{ opt }}
             </option>
           </select>

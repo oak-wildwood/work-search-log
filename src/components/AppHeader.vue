@@ -1,23 +1,48 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useSettings } from '../composables/useSettings'
+import { useStateConfig } from '../composables/useStateConfig'
+import { resolveRequirement } from '../lib/requirements'
+import { currentWeekKey } from '../lib/weeks'
+
+defineEmits<{ 'open-preferences': [] }>()
 
 const { isDark, toggleTheme } = useTheme()
-const { settings } = useSettings()
+const { settings, schedule } = useSettings()
+const { config } = useStateConfig()
+
+const thisWeekKey = computed(() => currentWeekKey(config.value.weekStartDay))
+
+const current = computed(() => resolveRequirement(schedule.value, thisWeekKey.value))
+
+/** What the preferences button shows, so the active setup is visible without opening it. */
+const summary = computed(() => {
+  const state = settings.value.stateCode ?? 'No state'
+  const goal = current.value?.total ? `${current.value.total}/wk` : 'no goal'
+  return `${state} · ${goal}`
+})
 </script>
 
 <template>
   <header>
     <div class="title-row">
       <h1>Work Search Log</h1>
-      <span class="eyebrow">Work Search Activity Record</span>
+      <!-- The agency name comes from the selected state, which is what used to
+           require a separate branch per state. -->
+      <span class="eyebrow">{{ config.agencyName }}</span>
+      <span v-if="settings.name" class="claimant">{{ settings.name }}</span>
     </div>
     <div class="header-controls no-print">
-      <label class="goal">
-        Goal
-        <input v-model.number="settings.minPerWeek" type="number" min="1" />
-        / wk
-      </label>
+      <button
+        class="prefs-btn"
+        type="button"
+        title="Preferences"
+        @click="$emit('open-preferences')"
+      >
+        <span class="prefs-gear" aria-hidden="true">⚙</span>
+        <span class="prefs-summary">{{ summary }}</span>
+      </button>
       <button
         class="theme-toggle"
         :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -65,26 +90,33 @@ h1 {
   align-items: center;
   gap: 14px;
 }
-.goal {
+.claimant {
+  font-size: 12px;
+  color: var(--muted);
+}
+.prefs-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--brass);
-}
-.goal input {
-  width: 46px;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  padding: 5px;
+  gap: 7px;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: 14px;
   background: var(--card);
+  color: var(--brass);
+  cursor: pointer;
+}
+.prefs-btn:hover {
+  border-color: var(--brass);
+}
+.prefs-gear {
+  font-size: 13px;
+  line-height: 1;
+}
+.prefs-summary {
+  font-family: var(--font-mono);
   color: var(--ink);
-  text-transform: none;
 }
 .theme-toggle {
   width: 30px;

@@ -1,0 +1,211 @@
+{
+  "code": "WA",
+  "agency_name": "Washington State Employment Security Department",
+  "agency_short": "ESD",
+
+  "week_start_day": 0,
+  "requirement_source": "state",
+  "weekly_requirement": 3,
+  "jurisdiction_label": "WorkSource office",
+  "claim_id_label": "Customer ID or SSN",
+  "has_online_logging": false,
+
+  "activity_types": [
+    {
+      "id": "contact_employer",
+      "label": "Contacted an employer about a job",
+      "counts_as": "employer_contact"
+    },
+    {
+      "id": "apply_employer",
+      "label": "Applied for a job or sent a résumé",
+      "counts_as": "employer_contact"
+    },
+    {
+      "id": "interview",
+      "label": "Interviewed for a job",
+      "counts_as": "employer_contact",
+      "offline": true
+    },
+
+    {
+      "id": "worksource_registration",
+      "label": "Signed up with a WorkSource employment center",
+      "counts_as": "registration",
+      "max_per_claim": 1
+    },
+    {
+      "id": "worksource_resume",
+      "label": "Uploaded or updated résumé on WorkSource",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "worksource_workshop",
+      "label": "Attended a WorkSource workshop (in person or virtual)",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "worksource_staff",
+      "label": "Met with a WorkSource specialist or career coach",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "worksource_career_profile",
+      "label": "Completed the WorkSource career profile tool",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "resea",
+      "label": "Attended a RESEA appointment",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+
+    {
+      "id": "job_fair",
+      "label": "Attended a job fair or hiring event",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "job_club",
+      "label": "Participated in a job club",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "intro_speech",
+      "label": "Prepared or practiced a 30-second introductory speech",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "work_experience",
+      "label": "Took part in a work experience or internship",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "job_shadow",
+      "label": "Completed virtual or remote job shadowing",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "on_the_job_training",
+      "label": "Took part in on-the-job training",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+
+    {
+      "id": "job_site_account",
+      "label": "Set up or updated an account on a job search website",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "resume_upload",
+      "label": "Posted a résumé or cover letter to a job board",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "interest_inventory",
+      "label": "Completed an online interest inventory",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "workkeys",
+      "label": "Completed an ACT WorkKeys assessment",
+      "counts_as": "approved_activity"
+    },
+
+    {
+      "id": "job_search_video",
+      "label": "Watched an online video on a job search topic",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "online_course",
+      "label": "Completed an online course (LinkedIn Learning or similar)",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "work_readiness_credential",
+      "label": "Earned the National Work Readiness Credential",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "labor_market_research",
+      "label": "Researched the labor market on ESD's website",
+      "counts_as": "approved_activity"
+    },
+
+    {
+      "id": "instructor_led_course",
+      "label": "Attended an instructor-led course (ESL, ABE, GED, occupational, computer)",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "self_paced_course",
+      "label": "Worked on a self-paced course (ESL, ABE, GED, occupational, computer)",
+      "counts_as": "approved_activity",
+      "max_per_week": 1
+    },
+
+    {
+      "id": "app_based_work",
+      "label": "Set up or activated an app-based driving or delivery account",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "private_agency",
+      "label": "Registered with a placement agency, recruiter, or career coach",
+      "counts_as": "approved_activity"
+    },
+    {
+      "id": "wioa_services",
+      "label": "Took part in WIOA Title I-B services",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+    {
+      "id": "vocational_rehab",
+      "label": "Completed activities with DVR or Services for the Blind",
+      "counts_as": "approved_activity",
+      "offline": true
+    },
+
+    { "id": "other", "label": "Other approved activity", "counts_as": "approved_activity" }
+  ],
+
+  "contact_methods": ["In person", "Online", "By phone", "By email", "By mail", "Other"],
+  "result_options": [
+    "Application submitted",
+    "Résumé sent",
+    "Interviewed",
+    "Hired",
+    "Not hired",
+    "No reply",
+    "Other"
+  ],
+  "site_options": [
+    "WorkSourceWA.com",
+    "LinkedIn",
+    "Indeed",
+    "Glassdoor",
+    "Monster.com",
+    "CareerBuilder.com",
+    "Company website"
+  ],
+
+  "required_fields": ["date", "activity_type"],
+
+  "duplicate_employer_counts": true,
+  "retention": "for at least 30 days after the end of your benefit year, or 30 days after you stop receiving benefits, whichever is later",
+
+  "official_log_url": "https://esd.wa.gov/job-search-log",
+  "rules_url": "https://esd.wa.gov/get-financial-help/unemployment-benefits/weekly-unemployment-claims/job-search-requirements",
+
+  "last_verified": "2026-08-19"
+}

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { formatISODate } from '../lib/weeks'
 import type { Entry } from '../types'
 
 const props = defineProps<{
@@ -13,16 +14,8 @@ const emit = defineEmits<{
 
 const showDetails = ref(false)
 
-function fmtDate(dateStr: string): string {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
 const summaryLine = computed(() =>
-  [fmtDate(props.entry.date), props.entry.employer, props.entry.siteAppliedOn]
+  [formatISODate(props.entry.date), props.entry.employer, props.entry.siteAppliedOn]
     .filter(Boolean)
     .join(' · '),
 )
@@ -37,9 +30,15 @@ const hasDetails = computed(
     props.entry.notes,
 )
 
+function toggleDetails() {
+  showDetails.value = !showDetails.value
+}
+
 function handleRemove(entry: Entry) {
   if (
-    confirm(`Delete the ${fmtDate(entry.date)} entry for ${entry.employer || 'this activity'}?`)
+    confirm(
+      `Delete the ${formatISODate(entry.date)} entry for ${entry.employer || 'this activity'}?`,
+    )
   ) {
     emit('remove', entry.id)
   }
@@ -47,25 +46,22 @@ function handleRemove(entry: Entry) {
 </script>
 
 <template>
-  <div class="entry">
+  <div class="entry" :class="{ clickable: hasDetails }" @click="hasDetails && toggleDetails()">
     <div class="entry-row">
       <span class="activity">{{ entry.activity || '—' }}</span>
       <div class="entry-actions">
-        <button
-          v-if="hasDetails"
-          class="text-link"
-          type="button"
-          @click="showDetails = !showDetails"
-        >
+        <!-- Kept as a real button so the card stays keyboard-operable; the
+             card-wide click is a convenience on top of it, not a replacement. -->
+        <button v-if="hasDetails" class="text-link" type="button" @click.stop="toggleDetails">
           {{ showDetails ? 'Hide' : 'Details' }}
         </button>
-        <button class="icon-btn" title="Edit" @click="emit('edit', entry)">✎</button>
-        <button class="icon-btn" title="Delete" @click="handleRemove(entry)">✕</button>
+        <button class="icon-btn" title="Edit" @click.stop="emit('edit', entry)">✎</button>
+        <button class="icon-btn" title="Delete" @click.stop="handleRemove(entry)">✕</button>
       </div>
     </div>
     <div class="summary">{{ summaryLine }}</div>
 
-    <div v-if="showDetails" class="details">
+    <div v-if="hasDetails" class="details" :class="{ collapsed: !showDetails }">
       <div v-if="entry.jobType" class="row">
         <span class="label">Job sought</span> {{ entry.jobType }}
       </div>
@@ -95,6 +91,12 @@ function handleRemove(entry: Entry) {
   margin-bottom: 8px;
   font-size: 13px;
   line-height: 1.5;
+}
+.entry.clickable {
+  cursor: pointer;
+}
+.entry.clickable:hover {
+  border-color: var(--brass);
 }
 .entry-row {
   display: flex;

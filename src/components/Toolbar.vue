@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { Entry } from '../types'
 import { toCsv } from '../lib/csv'
 import { parseBackupJson, toBackupJson } from '../lib/backup'
+import { useStateConfig } from '../composables/useStateConfig'
 
 const props = defineProps<{
   entries: Entry[]
@@ -15,6 +16,12 @@ const emit = defineEmits<{
 
 const fileInput = ref<HTMLInputElement>()
 const importMessage = ref('')
+
+// Retention and the agency's name both vary by state, so the footer sentence is
+// assembled from the config rather than asserted in the markup. `agencyShort`
+// reads "your state agency" until a state is picked, which is why it sits after
+// a dash rather than starting a sentence.
+const { config } = useStateConfig()
 
 function downloadBlob(content: string, filename: string, type: string) {
   const blob = new Blob([content], { type })
@@ -72,8 +79,8 @@ function handleClearAll() {
 <template>
   <footer class="app-footer no-print">
     <p class="footer-note">
-      Keep this for your entire benefit year. Your state workforce agency may request it for any
-      week, at any time.
+      Keep this {{ config.retention }} — {{ config.agencyShort }} may request it for any week, at
+      any time.
     </p>
     <div class="footer-row">
       <nav class="links">
