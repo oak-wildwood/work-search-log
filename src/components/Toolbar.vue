@@ -21,6 +21,9 @@ const importMessage = ref('')
 // rather than being asserted in the markup.
 const { config } = useStateConfig()
 const retention = computed(() => config.value.retention)
+// Reads "TWC may request it" once a state is picked, "your state agency" otherwise,
+// which is why the sentence puts it after a dash rather than at a full stop.
+const agency = computed(() => config.value.agencyShort)
 
 function downloadBlob(content: string, filename: string, type: string) {
   const blob = new Blob([content], { type })
@@ -78,8 +81,7 @@ function handleClearAll() {
 <template>
   <footer class="app-footer no-print">
     <p class="footer-note">
-      Keep this {{ retention }}. Your state workforce agency may request it for any week, at any
-      time.
+      Keep this {{ retention }} — {{ agency }} may request it for any week, at any time.
     </p>
     <div class="footer-row">
       <nav class="links">

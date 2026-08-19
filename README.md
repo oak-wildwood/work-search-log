@@ -57,12 +57,10 @@ Pages — it needs nothing beyond the repo you already have, no extra account, n
 
 Every future push to `main` redeploys automatically.
 
-If you keep a customized branch of your own alongside the public one, `pages.yml` will publish that
-branch at the root and `main` as a demo under `/demo/`, since a repo only gets one Pages site. It
-looks for the branch named in the workflow's `PERSONAL_BRANCH` and skips the split entirely when
-there isn't one — which is the normal case for a fresh fork. The demo build is given its own
-`localStorage` namespace, because browser storage is scoped per origin rather than per path, and
-without that the demo and the real log would overwrite each other's entries.
+You don't need a branch of your own to use this for a particular state. Which state the app follows
+is a runtime choice stored in your browser, not something baked into the build, so the deployed copy
+works for whoever opens it — including you. Your entries stay in your browser; there's no server to
+share them with anyone.
 
 > If Pages ever serves a blank page with a 404 for `/src/main.ts` in the console, GitHub fell back
 > to its own generic deploy instead of running this repo's workflow — usually because the

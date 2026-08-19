@@ -30,7 +30,9 @@ const summary = computed(() => {
   <header>
     <div class="title-row">
       <h1>Work Search Log</h1>
-      <span class="eyebrow">Work Search Activity Record</span>
+      <!-- The agency name comes from the selected state, which is what used to
+           require a separate branch per state. -->
+      <span class="eyebrow">{{ config.agencyName }}</span>
       <span v-if="settings.name" class="claimant">{{ settings.name }}</span>
     </div>
     <div class="header-controls no-print">
