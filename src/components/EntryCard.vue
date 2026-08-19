@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { formatISODate } from '../lib/weeks'
 import type { Entry } from '../types'
 
 const props = defineProps<{
@@ -13,16 +14,8 @@ const emit = defineEmits<{
 
 const showDetails = ref(false)
 
-function fmtDate(dateStr: string): string {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
 const summaryLine = computed(() =>
-  [fmtDate(props.entry.date), props.entry.employer, props.entry.siteAppliedOn]
+  [formatISODate(props.entry.date), props.entry.employer, props.entry.siteAppliedOn]
     .filter(Boolean)
     .join(' · '),
 )
@@ -43,7 +36,9 @@ function toggleDetails() {
 
 function handleRemove(entry: Entry) {
   if (
-    confirm(`Delete the ${fmtDate(entry.date)} entry for ${entry.employer || 'this activity'}?`)
+    confirm(
+      `Delete the ${formatISODate(entry.date)} entry for ${entry.employer || 'this activity'}?`,
+    )
   ) {
     emit('remove', entry.id)
   }
@@ -66,7 +61,7 @@ function handleRemove(entry: Entry) {
     </div>
     <div class="summary">{{ summaryLine }}</div>
 
-    <div v-if="hasDetails" v-show="showDetails" class="details">
+    <div v-if="hasDetails" class="details" :class="{ collapsed: !showDetails }">
       <div v-if="entry.jobType" class="row">
         <span class="label">Job sought</span> {{ entry.jobType }}
       </div>
@@ -176,11 +171,6 @@ function handleRemove(entry: Entry) {
   }
   .entry-actions {
     display: none;
-  }
-  /* The printed log is the full record, so every entry's details print whether
-     or not it was expanded on screen. */
-  .details {
-    display: block !important;
   }
 }
 </style>

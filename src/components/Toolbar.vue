@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import type { Entry } from '../types'
 import { toCsv } from '../lib/csv'
 import { parseBackupJson, toBackupJson } from '../lib/backup'
@@ -17,13 +17,11 @@ const emit = defineEmits<{
 const fileInput = ref<HTMLInputElement>()
 const importMessage = ref('')
 
-// How long a record must be kept varies by state, so it comes from the config
-// rather than being asserted in the markup.
+// Retention and the agency's name both vary by state, so the footer sentence is
+// assembled from the config rather than asserted in the markup. `agencyShort`
+// reads "your state agency" until a state is picked, which is why it sits after
+// a dash rather than starting a sentence.
 const { config } = useStateConfig()
-const retention = computed(() => config.value.retention)
-// Reads "TWC may request it" once a state is picked, "your state agency" otherwise,
-// which is why the sentence puts it after a dash rather than at a full stop.
-const agency = computed(() => config.value.agencyShort)
 
 function downloadBlob(content: string, filename: string, type: string) {
   const blob = new Blob([content], { type })
@@ -81,7 +79,8 @@ function handleClearAll() {
 <template>
   <footer class="app-footer no-print">
     <p class="footer-note">
-      Keep this {{ retention }} — {{ agency }} may request it for any week, at any time.
+      Keep this {{ config.retention }} — {{ config.agencyShort }} may request it for any week, at
+      any time.
     </p>
     <div class="footer-row">
       <nav class="links">

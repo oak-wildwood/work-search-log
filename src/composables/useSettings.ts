@@ -114,16 +114,6 @@ function markOnboarded() {
 /** True on a first run, when setup hasn't been shown yet. */
 const needsOnboarding = computed(() => settings.value.onboardedAt === null)
 
-function addExemptPeriod(period: ExemptPeriod) {
-  settings.value.exemptPeriods = [...settings.value.exemptPeriods, period].sort((a, b) =>
-    a.start.localeCompare(b.start),
-  )
-}
-
-function removeExemptPeriod(index: number) {
-  settings.value.exemptPeriods = settings.value.exemptPeriods.filter((_, i) => i !== index)
-}
-
 export function useSettings() {
   return {
     settings,
@@ -133,7 +123,5 @@ export function useSettings() {
     setStateCode,
     setName,
     markOnboarded,
-    addExemptPeriod,
-    removeExemptPeriod,
   }
 }

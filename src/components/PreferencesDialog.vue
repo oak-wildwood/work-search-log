@@ -4,7 +4,7 @@ import { useSettings } from '../composables/useSettings'
 import { useTheme } from '../composables/useTheme'
 import { getStateConfig, listStateConfigs } from '../config'
 import { resolveRequirement } from '../lib/requirements'
-import { toLocalISODate, weekStartDate } from '../lib/weeks'
+import { currentWeekKey } from '../lib/weeks'
 
 const props = defineProps<{
   open: boolean
@@ -23,29 +23,31 @@ const states = listStateConfigs()
 // Edited locally and only committed on save, so dismissing leaves nothing behind.
 const draftName = ref('')
 const draftState = ref('')
-const draftCount = ref<number | null>(null)
 
 const draftConfig = computed(() => getStateConfig(draftState.value || null).config)
 
 /** The number the state fixes for everyone, where it fixes one at all. */
 const stateFixedCount = computed(() => draftConfig.value.weeklyRequirement ?? null)
 
-const weekKey = computed(() =>
-  toLocalISODate(weekStartDate(toLocalISODate(new Date()), draftConfig.value.weekStartDay)),
-)
+const weekKey = computed(() => currentWeekKey(draftConfig.value.weekStartDay))
 
 /**
- * Whether the number in the box came from a config rather than from the person.
- * A config's number belongs to its state, so switching states re-derives it —
- * but anything typed by hand survives.
+ * Only what the person actually chose is stored; the state's own number fills in
+ * behind it. That makes switching states re-derive the offered number for free,
+ * while anything typed by hand survives the switch, with no provenance flag to
+ * keep in sync.
  */
-const countFromConfig = ref(false)
+const enteredCount = ref<number | null>(null)
+
+const draftCount = computed<number | null>({
+  get: () => enteredCount.value ?? stateFixedCount.value,
+  set: (value) => (enteredCount.value = value),
+})
 
 function reset() {
   draftName.value = settings.value.name
   draftState.value = settings.value.stateCode ?? ''
-  draftCount.value = resolveRequirement(schedule.value, weekKey.value)?.total ?? null
-  countFromConfig.value = false
+  enteredCount.value = resolveRequirement(schedule.value, weekKey.value)?.total ?? null
 }
 
 watch(
@@ -53,12 +55,6 @@ watch(
   (open) => open && reset(),
   { immediate: true },
 )
-
-watch(draftState, () => {
-  if (draftCount.value !== null && !countFromConfig.value) return
-  draftCount.value = stateFixedCount.value
-  countFromConfig.value = stateFixedCount.value !== null
-})
 
 const countHint = computed(() => {
   const config = draftConfig.value
@@ -115,13 +111,7 @@ function dismiss() {
 
       <label class="field">
         <span class="label">Activities required each week</span>
-        <input
-          v-model.number="draftCount"
-          type="number"
-          min="1"
-          placeholder="—"
-          @input="countFromConfig = false"
-        />
+        <input v-model.number="draftCount" type="number" min="1" placeholder="—" />
         <span class="hint">
           {{ countHint }}
           <a

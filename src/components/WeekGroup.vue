@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { WeekGroup } from '../lib/weeks'
-import type { WeekStatus } from '../lib/requirements'
+import { outcomeClass, type WeekStatus } from '../lib/requirements'
+import { formatDate } from '../lib/weeks'
 import type { Entry } from '../types'
 import EntryCard from './EntryCard.vue'
 
@@ -16,20 +17,7 @@ defineEmits<{
   remove: [id: string]
 }>()
 
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-const badgeClass = computed(() => {
-  switch (props.status?.outcome) {
-    case 'met':
-      return 'ok'
-    case 'short':
-      return 'warn'
-    default:
-      return 'neutral'
-  }
-})
+const badgeClass = computed(() => outcomeClass(props.status?.outcome))
 
 /** No requirement on file means no verdict — the badge shows the count and nothing more. */
 const badgeText = computed(() => {
@@ -47,31 +35,32 @@ const expanded = ref(props.defaultExpanded)
   <div class="week-block">
     <button class="week-head" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
       <span class="caret">{{ expanded ? '▾' : '▸' }}</span>
-      <span class="week-title">{{ fmtDate(group.start) }} – {{ fmtDate(group.end) }}</span>
+      <span class="week-title">{{ formatDate(group.start) }} – {{ formatDate(group.end) }}</span>
       <span class="week-meta">
         <span class="week-activity-count">
           {{ group.entries.length }} {{ group.entries.length === 1 ? 'activity' : 'activities' }}
         </span>
-        <span class="week-count" :class="badgeClass">{{ badgeText }}</span>
+        <!-- Scoring is marked no-print wherever it is rendered. The badge and the
+             cap warnings are this app's reading of the rules, and printing them
+             would tell an agency that one of the claimant's own activities
+             shouldn't count — their determination to make, not ours. An exempt
+             week keeps its reason, which explains a gap rather than judging it. -->
+        <span class="week-count no-print" :class="badgeClass">{{ badgeText }}</span>
       </span>
     </button>
 
     <p v-if="status?.exemptReason" class="week-note">Exempt — {{ status.exemptReason }}</p>
     <p
       v-if="status?.minEmployerContacts"
-      class="week-note week-note-scoring"
+      class="week-note no-print"
       :class="{ warn: status.employerContacts < status.minEmployerContacts }"
     >
       {{ status.employerContacts }} of {{ status.minEmployerContacts }} required employer contacts
     </p>
-    <p
-      v-for="notice in status?.notices ?? []"
-      :key="notice"
-      class="week-note week-note-scoring warn"
-    >
+    <p v-for="notice in status?.notices ?? []" :key="notice" class="week-note warn no-print">
       {{ notice }}
     </p>
-    <div v-show="expanded" class="week-entries">
+    <div class="week-entries" :class="{ collapsed: !expanded }">
       <EntryCard
         v-for="entry in group.entries"
         :key="entry.id"
@@ -151,26 +140,12 @@ const expanded = ref(props.defaultExpanded)
   color: var(--warn);
 }
 @media print {
-  /* Every week prints in full, whatever was expanded on screen. `v-show` sets an
-     inline display:none, which a stylesheet !important still overrides. */
-  .week-entries {
-    display: block !important;
-  }
   .week-head {
     cursor: default;
     break-after: avoid;
     page-break-after: avoid;
   }
   .caret {
-    display: none;
-  }
-  /* This app's scoring stays off the printed sheet. The counted-vs-required badge
-     and the cap warnings are our reading of the rules, and printing them would
-     assert to an agency that one of the claimant's own activities shouldn't
-     count. The activity list is the record; the verdict is theirs to reach.
-     An exempt week keeps its reason, which explains a gap rather than judging it. */
-  .week-count,
-  .week-note-scoring {
     display: none;
   }
 }

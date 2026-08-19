@@ -1,5 +1,3 @@
-import type { Entry } from '../types'
-
 /**
  * How an activity counts toward a week's requirement. Some states require that a
  * portion of the weekly total be actual employer contacts rather than workshops,
@@ -24,12 +22,6 @@ export interface ActivityType {
   maxPerWeek?: number
   /** Not done through a job site or board, so the "Site or source" field is hidden. */
   offline?: boolean
-}
-
-export interface SubmissionInfo {
-  portalUrl?: string
-  acceptsMail: boolean
-  acceptsFax: boolean
 }
 
 /**
@@ -65,7 +57,6 @@ export interface StateConfig {
   retention: string
   officialLogUrl?: string
   rulesUrl?: string
-  submission?: SubmissionInfo
   /** yyyy-mm-dd the values were last checked against the agency's own page. Null when never verified. */
   lastVerified: string | null
 }
@@ -89,21 +80,6 @@ export const FIELD_IDS = [
 ] as const
 
 export type FieldId = (typeof FIELD_IDS)[number]
-
-/** Maps a config field id onto the key it occupies in a stored entry. */
-export const FIELD_ENTRY_KEYS: Record<FieldId, keyof Entry> = {
-  date: 'date',
-  activity_type: 'activity',
-  site_or_source: 'siteAppliedOn',
-  job_sought: 'jobType',
-  employer_name: 'employer',
-  employer_contact_info: 'address',
-  employer_phone: 'phone',
-  contact_name: 'contactName',
-  contact_method: 'contactMethod',
-  result: 'result',
-  notes: 'notes',
-}
 
 export function isFieldId(value: string): value is FieldId {
   return (FIELD_IDS as readonly string[]).includes(value)

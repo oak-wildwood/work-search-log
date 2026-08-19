@@ -1,6 +1,7 @@
 import type { Entry } from '../types'
 import type { ActivityType, CountsAs, FieldId, RequirementSource, StateConfig } from './types'
 import { isFieldId } from './types'
+import { parseLocalISO } from '../lib/weeks'
 
 export const GENERIC_US_CODE = 'GENERIC_US'
 
@@ -64,8 +65,6 @@ function normalizeConfig(raw: unknown): StateConfig | null {
       : 0
 
   const requirementSourceRaw = str(rec.requirement_source)
-  const submission = asRecord(rec.submission)
-  const portalUrl = str(submission.portal_url)
 
   const config: StateConfig = {
     code,
@@ -105,13 +104,6 @@ function normalizeConfig(raw: unknown): StateConfig | null {
   if (weeklyRequirement !== undefined && config.requirementSource === 'state') {
     config.weeklyRequirement = weeklyRequirement
   }
-  if (portalUrl || 'accepts_mail' in submission || 'accepts_fax' in submission) {
-    config.submission = {
-      acceptsMail: bool(submission.accepts_mail),
-      acceptsFax: bool(submission.accepts_fax),
-    }
-    if (portalUrl) config.submission.portalUrl = portalUrl
-  }
 
   // Date is the one field nothing can degrade past: an undated record isn't a record.
   if (!config.requiredFields.includes('date')) config.requiredFields.unshift('date')
@@ -127,25 +119,12 @@ for (const raw of Object.values(modules)) {
   if (config) registry.set(config.code, config)
 }
 
-/** Last-resort config, used when even GENERIC_US failed to load. */
-const MINIMAL_FALLBACK: StateConfig = {
-  code: GENERIC_US_CODE,
-  agencyName: 'your state workforce agency',
-  agencyShort: 'your state agency',
-  weekStartDay: 0,
-  requirementSource: 'letter',
-  jurisdictionLabel: 'Local office / area',
-  claimIdLabel: 'Claim number',
-  hasOnlineLogging: false,
-  activityTypes: [],
-  contactMethods: [],
-  resultOptions: [],
-  siteOptions: [],
-  requiredFields: ['date'],
-  duplicateEmployerCounts: true,
-  retention: 'for your entire benefit year',
-  lastVerified: null,
-}
+/**
+ * Last-resort config, used when even GENERIC_US failed to load. Built by handing
+ * the normalizer nothing but a code, so it can only ever be the normalizer's own
+ * defaults — spelling them out again here would let the two drift apart.
+ */
+const MINIMAL_FALLBACK = normalizeConfig({ code: GENERIC_US_CODE }) as StateConfig
 
 export const genericConfig: StateConfig = registry.get(GENERIC_US_CODE) ?? MINIMAL_FALLBACK
 
@@ -179,11 +158,38 @@ export function listStateConfigs(): StateConfig[] {
  */
 export function isStale(config: StateConfig, now = new Date()): boolean {
   if (!config.lastVerified) return true
-  const verified = new Date(`${config.lastVerified}T00:00:00`)
+  const verified = parseLocalISO(config.lastVerified)
   if (Number.isNaN(verified.getTime())) return true
   const cutoff = new Date(now)
   cutoff.setMonth(cutoff.getMonth() - STALE_AFTER_MONTHS)
   return verified < cutoff
+}
+
+/**
+ * Lookups for `resolveActivity`, built once per config. Entries logged before
+ * activity ids existed resolve by label, and that runs for every entry of every
+ * week on each rescore — scanning and lowercasing the whole activity list each
+ * time would do that work again and again for a config that never changes.
+ */
+interface ActivityIndex {
+  byId: Map<string, ActivityType>
+  byLabel: Map<string, ActivityType>
+}
+
+// Keyed weakly so a config built in a test doesn't outlive the test.
+const indexes = new WeakMap<StateConfig, ActivityIndex>()
+
+function indexOf(config: StateConfig): ActivityIndex {
+  let index = indexes.get(config)
+  if (!index) {
+    index = { byId: new Map(), byLabel: new Map() }
+    for (const activity of config.activityTypes) {
+      index.byId.set(activity.id, activity)
+      index.byLabel.set(activity.label.trim().toLowerCase(), activity)
+    }
+    indexes.set(config, index)
+  }
+  return index
 }
 
 /**
@@ -192,11 +198,12 @@ export function isStale(config: StateConfig, now = new Date()): boolean {
  * different state's config — still resolve where the label happens to line up.
  */
 export function resolveActivity(config: StateConfig, entry: Entry): ActivityType | null {
+  const { byId, byLabel } = indexOf(config)
   if (entry.activityId) {
-    const byId = config.activityTypes.find((a) => a.id === entry.activityId)
-    if (byId) return byId
+    const match = byId.get(entry.activityId)
+    if (match) return match
   }
   const label = entry.activity?.trim().toLowerCase()
   if (!label) return null
-  return config.activityTypes.find((a) => a.label.trim().toLowerCase() === label) ?? null
+  return byLabel.get(label) ?? null
 }

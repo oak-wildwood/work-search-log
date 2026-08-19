@@ -54,7 +54,7 @@ Please don't guess. A field left at its default is better than a confidently wro
 | `required_fields`                                     | Which fields the state's own log asks for. **Not wired to the UI yet** — it's recorded data, and the form currently requires only date and activity. `date` is always included whatever you put here.  |
 | `duplicate_employer_counts`                           | `false` if repeat contact with the same employer in one week may not count twice. Produces a warning only — never blocks.                                     |
 | `retention`                                           | How long the record must be kept, as a phrase completing "Keep this ___" — e.g. `for your entire benefit year`.                                               |
-| `official_log_url` / `rules_url` / `submission`       | Links to the agency's own form, rules page, and how it accepts submissions.                                                                                   |
+| `official_log_url` / `rules_url`                      | Links to the agency's own printable log form and its rules page. Both are shown to the claimant.                                                              |
 
 ### Activity types
 

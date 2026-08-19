@@ -3,8 +3,16 @@ import { computed, ref } from 'vue'
 import { useEntries } from './composables/useEntries'
 import { useSettings } from './composables/useSettings'
 import { useStateConfig } from './composables/useStateConfig'
-import { groupByWeek, toLocalISODate, weekStartDate, type WeekGroup as Week } from './lib/weeks'
-import { evaluateWeeks, type WeekStatus } from './lib/requirements'
+import {
+  currentWeekKey,
+  formatDate,
+  formatISODate,
+  groupByWeek,
+  toLocalISODate,
+  weekStartDate,
+  type WeekGroup as Week,
+} from './lib/weeks'
+import { evaluateWeeks, outcomeClass, type WeekStatus } from './lib/requirements'
 import type { Entry, EntryDraft } from './types'
 import AppHeader from './components/AppHeader.vue'
 import WeekGroup from './components/WeekGroup.vue'
@@ -24,21 +32,15 @@ const editingEntry = ref<Entry | null>(null)
 const firstRun = needsOnboarding.value
 const prefsOpen = ref(firstRun)
 
-function todayLocalISO(): string {
-  return toLocalISODate(new Date())
-}
-
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-const thisWeekStart = computed(() => weekStartDate(todayLocalISO(), config.value.weekStartDay))
+const thisWeekStart = computed(() =>
+  weekStartDate(toLocalISODate(new Date()), config.value.weekStartDay),
+)
 const thisWeekEnd = computed(() => {
   const end = new Date(thisWeekStart.value)
   end.setDate(end.getDate() + 6)
   return end
 })
-const thisWeekKey = computed(() => toLocalISODate(thisWeekStart.value))
+const thisWeekKey = computed(() => currentWeekKey(config.value.weekStartDay))
 
 /** Weeks that actually contain entries — what the history list renders. */
 const weeks = computed(() => groupByWeek(entries.value, config.value.weekStartDay))
@@ -69,13 +71,6 @@ const thisWeekSegments = computed(() => {
   return Array.from({ length: total }, (_, i) => i < status.counted)
 })
 
-function statusClass(status: WeekStatus | undefined): string {
-  if (!status) return ''
-  if (status.outcome === 'met') return 'ok'
-  if (status.outcome === 'short') return 'warn'
-  return 'neutral'
-}
-
 function handleSubmit(draft: EntryDraft) {
   if (editingEntry.value) {
     updateEntry(editingEntry.value.id, draft)
@@ -105,16 +100,18 @@ function handlePrint() {
  * the agency's determination, not something this tool should assert to them.
  */
 const printPeriod = computed(() => {
-  const dates = entries.value.map((e) => e.date).filter(Boolean)
-  if (!dates.length) return '—'
-  const sorted = [...dates].sort()
-  const fmt = (iso: string) => fmtDate(new Date(`${iso}T00:00:00`))
-  const first = fmt(sorted[0])
-  const last = fmt(sorted[sorted.length - 1])
-  return first === last ? first : `${first} – ${last}`
+  let first = ''
+  let last = ''
+  for (const { date } of entries.value) {
+    if (!date) continue
+    if (!first || date < first) first = date
+    if (!last || date > last) last = date
+  }
+  if (!first) return '—'
+  return first === last ? formatISODate(first) : `${formatISODate(first)} – ${formatISODate(last)}`
 })
 
-const printedOn = computed(() => fmtDate(new Date()))
+const printedOn = computed(() => formatDate(new Date()))
 </script>
 
 <template>
@@ -195,14 +192,16 @@ const printedOn = computed(() => fmtDate(new Date()))
     <section class="this-week">
       <p class="eyebrow">This week</p>
       <div class="this-week-row">
-        <h2 class="range">{{ fmtDate(thisWeekStart) }} – {{ fmtDate(thisWeekEnd) }}</h2>
+        <h2 class="range">{{ formatDate(thisWeekStart) }} – {{ formatDate(thisWeekEnd) }}</h2>
         <div class="summary">
           <template v-if="thisWeek?.outcome === 'exempt'">
             <span class="exempt-badge">Exempt</span>
             <span class="caption">{{ thisWeek.exemptReason }}</span>
           </template>
           <template v-else>
-            <span class="count" :class="statusClass(thisWeek)">{{ thisWeek?.counted ?? 0 }}</span>
+            <span class="count" :class="outcomeClass(thisWeek?.outcome)">{{
+              thisWeek?.counted ?? 0
+            }}</span>
             <div v-if="thisWeekSegments.length" class="segments">
               <span
                 v-for="(filled, i) in thisWeekSegments"
@@ -445,19 +444,12 @@ main {
   color: var(--green-deep);
 }
 
-.print-only {
-  display: none;
-}
-
 @media print {
   /* The on-screen "History / N total" strip is replaced by the cover block, which
      says the same thing in terms an agency reader can act on. */
   .history-head,
   .this-week {
     display: none;
-  }
-  .print-only {
-    display: block;
   }
   .print-cover {
     margin-bottom: 18px;

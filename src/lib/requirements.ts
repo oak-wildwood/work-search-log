@@ -180,11 +180,12 @@ export function evaluateWeeks(
   return statuses
 }
 
-/** Convenience for a single week, when the surrounding weeks aren't in hand. */
-export function evaluateWeek(
-  group: WeekGroup,
-  config: StateConfig,
-  schedule?: RequirementSchedule,
-): WeekStatus {
-  return evaluateWeeks([group], config, schedule).get(group.key) as WeekStatus
+/**
+ * The class name an outcome renders under. Lives here so the week summary and the
+ * week list can't drift into disagreeing about what "short" looks like.
+ */
+export function outcomeClass(outcome: WeekOutcome | undefined): string {
+  if (outcome === 'met') return 'ok'
+  if (outcome === 'short') return 'warn'
+  return 'neutral'
 }

@@ -110,11 +110,6 @@
   "official_log_url": "https://www.twc.texas.gov/sites/default/files/ui/docs/work-search-log-twc.pdf",
   "rules_url": "https://www.twc.texas.gov/work-search",
   "requirement_lookup_url": "https://www.twc.texas.gov/programs/unemployment-benefits/required-number-work-search-activities-county",
-  "submission": {
-    "portal_url": "https://mft.twc.texas.gov/form/UIsubmissionENG",
-    "accepts_mail": true,
-    "accepts_fax": true
-  },
 
   "last_verified": "2026-08-19"
 }

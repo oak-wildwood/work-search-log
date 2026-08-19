@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateWeek } from './requirements'
+import { evaluateWeeks } from './requirements'
 import { groupByWeek } from './weeks'
 import { getStateConfig, resolveActivity } from '../config'
 import type { Entry } from '../types'
@@ -81,7 +81,7 @@ describe('logs written before state configs existed', () => {
     expect(resolveActivity(tx, entry)).toBeNull()
 
     const [week] = groupByWeek([entry], tx.weekStartDay)
-    expect(evaluateWeek(week, tx, scheduleOf(1)).counted).toBe(1)
+    expect(evaluateWeeks([week], tx, scheduleOf(1)).get(week.key)!.counted).toBe(1)
   })
 
   it('counts every legacy label, so no activity is silently dropped', () => {
@@ -89,7 +89,9 @@ describe('logs written before state configs existed', () => {
     const entries = LEGACY_LABELS.map((label) => legacyEntry('2026-08-11', label))
     const [week] = groupByWeek(entries, tx.weekStartDay)
 
-    expect(evaluateWeek(week, tx, scheduleOf(1)).counted).toBe(LEGACY_LABELS.length)
+    expect(evaluateWeeks([week], tx, scheduleOf(1)).get(week.key)!.counted).toBe(
+      LEGACY_LABELS.length,
+    )
   })
 
   it('groups legacy entries into the same weeks the old build did', () => {

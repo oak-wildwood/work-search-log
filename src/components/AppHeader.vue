@@ -4,7 +4,7 @@ import { useTheme } from '../composables/useTheme'
 import { useSettings } from '../composables/useSettings'
 import { useStateConfig } from '../composables/useStateConfig'
 import { resolveRequirement } from '../lib/requirements'
-import { toLocalISODate, weekStartDate } from '../lib/weeks'
+import { currentWeekKey } from '../lib/weeks'
 
 defineEmits<{ 'open-preferences': [] }>()
 
@@ -12,17 +12,15 @@ const { isDark, toggleTheme } = useTheme()
 const { settings, schedule } = useSettings()
 const { config } = useStateConfig()
 
-const thisWeekKey = computed(() =>
-  toLocalISODate(weekStartDate(toLocalISODate(new Date()), config.value.weekStartDay)),
-)
+const thisWeekKey = computed(() => currentWeekKey(config.value.weekStartDay))
 
 const current = computed(() => resolveRequirement(schedule.value, thisWeekKey.value))
 
 /** What the preferences button shows, so the active setup is visible without opening it. */
 const summary = computed(() => {
-  const parts = [settings.value.stateCode ?? 'No state']
-  parts.push(current.value?.total ? `${current.value.total}/wk` : 'no goal')
-  return parts.join(' · ')
+  const state = settings.value.stateCode ?? 'No state'
+  const goal = current.value?.total ? `${current.value.total}/wk` : 'no goal'
+  return `${state} · ${goal}`
 })
 </script>
 
