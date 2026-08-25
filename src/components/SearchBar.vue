@@ -1,25 +1,30 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useSearch } from '../composables/useSearch'
 
 const { searchQuery, matchCount, activeIndex, next, prev } = useSearch()
+
+const statusText = computed(() =>
+  matchCount.value ? `${activeIndex.value + 1} of ${matchCount.value}` : 'No matches',
+)
 
 function clear() {
   searchQuery.value = ''
 }
 
 /**
- * Left/right arrows step through matches while the box is focused, like a
- * browser find bar — but only unmodified presses, so shift/ctrl/alt+arrow
- * still do their normal text-selection or word-jump thing.
+ * Enter/Shift+Enter step through matches, matching how browser find-in-page
+ * and most search UIs do it. Left/right arrows would fight the box's own job
+ * as a text field: they're the keys a sighted user reaches for to move the
+ * caret while fixing a typo, and the same keys a screen reader uses to read
+ * the field's text character by character in forms mode — either way,
+ * repurposing them turns an expected editing gesture into a surprise.
  */
 function onKeydown(e: KeyboardEvent) {
-  if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return
-  if (e.key === 'ArrowRight') {
+  if (e.key === 'Enter') {
     e.preventDefault()
-    next()
-  } else if (e.key === 'ArrowLeft') {
-    e.preventDefault()
-    prev()
+    if (e.shiftKey) prev()
+    else next()
   } else if (e.key === 'Escape' && searchQuery.value) {
     clear()
   }
@@ -27,21 +32,25 @@ function onKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="search-bar no-print">
+  <div class="search-bar no-print" role="search">
     <span class="search-icon" aria-hidden="true">⌕</span>
     <input
       v-model="searchQuery"
       type="search"
       class="search-input"
       placeholder="Search job listings…"
+      aria-label="Search job listings"
       @keydown="onKeydown"
     />
     <div v-if="searchQuery.trim()" class="search-status">
-      <span class="search-count">{{ matchCount ? activeIndex + 1 : 0 }} of {{ matchCount }}</span>
+      <!-- role="status" announces each change (e.g. "2 of 10") to screen
+           readers without moving focus — otherwise stepping through matches
+           is silent for anyone not looking at the screen. -->
+      <span class="search-count" role="status" aria-live="polite">{{ statusText }}</span>
       <button
         class="nav-btn"
         type="button"
-        title="Previous match (←)"
+        title="Previous match (Shift+Enter)"
         :disabled="matchCount === 0"
         @click="prev"
       >
@@ -50,7 +59,7 @@ function onKeydown(e: KeyboardEvent) {
       <button
         class="nav-btn"
         type="button"
-        title="Next match (→)"
+        title="Next match (Enter)"
         :disabled="matchCount === 0"
         @click="next"
       >
