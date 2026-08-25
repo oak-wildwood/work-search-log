@@ -95,6 +95,7 @@ function handleClearAll() {
       ref="fileInput"
       type="file"
       accept="application/json"
+      aria-label="Backup file to import"
       class="visually-hidden"
       @change="handleFileChange"
     />

@@ -182,6 +182,7 @@ function handleCancel() {
           v-model="draft.siteAppliedOn"
           type="text"
           placeholder="Type the site name"
+          aria-label="Site name"
           class="site-other-input"
         />
       </div>
