@@ -87,7 +87,18 @@ function dismiss() {
 </script>
 
 <template>
-  <div v-if="open" class="backdrop no-print" @click.self="dismiss">
+  <!-- The dialog's real semantics live on .panel below; this is just a
+       dimming/click-catching layer, not a control of its own — role
+       "presentation" says so, and Escape (which bubbles up from whichever
+       field inside .panel has focus) is the keyboard equivalent of the
+       click-to-dismiss it offers to mouse users. -->
+  <div
+    v-if="open"
+    class="backdrop no-print"
+    role="presentation"
+    @click.self="dismiss"
+    @keydown.esc="dismiss"
+  >
     <div class="panel" role="dialog" aria-modal="true" aria-labelledby="prefs-title">
       <h2 id="prefs-title">{{ firstRun ? 'Set up your log' : 'Preferences' }}</h2>
       <p v-if="firstRun" class="lede">

@@ -46,6 +46,10 @@ function handleRemove(entry: Entry) {
 </script>
 
 <template>
+  <!-- The card-wide click is a mouse convenience layered on top of the real
+       "Details" button below, which is already fully keyboard-operable — so
+       there's no missing keyboard equivalent here to add. -->
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div class="entry" :class="{ clickable: hasDetails }" @click="hasDetails && toggleDetails()">
     <div class="entry-row">
       <span class="activity">{{ entry.activity || '—' }}</span>
