@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Agent tooling. AGENTS.md, CLAUDE.md and .claude/skills/ are checked in on purpose —
+# they're shared instructions. Per-machine permission settings are not.
+.claude/settings.local.json
+CLAUDE.local.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
