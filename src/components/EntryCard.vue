@@ -95,6 +95,10 @@ function handleRemove(entry: Entry) {
   margin-bottom: 8px;
   font-size: 13px;
   line-height: 1.5;
+  /* Notes and results are free text and sometimes a pasted URL — without
+     this, one unbroken long word forces the flex rows below wider than the
+     card and drags the whole page into horizontal scroll on narrow screens. */
+  overflow-wrap: anywhere;
 }
 .entry.clickable {
   cursor: pointer;
@@ -106,6 +110,7 @@ function handleRemove(entry: Entry) {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  min-width: 0;
 }
 .activity {
   font-weight: 600;
@@ -133,6 +138,7 @@ function handleRemove(entry: Entry) {
   gap: 6px;
   flex-wrap: wrap;
   margin-bottom: 3px;
+  min-width: 0;
 }
 .label {
   color: var(--brass);
