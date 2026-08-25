@@ -99,5 +99,6 @@ Worth keeping if you fork it:
 ```bash
 npm run test
 npm run lint
+npm run format:check
 npm run build
 ```
