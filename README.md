@@ -98,6 +98,31 @@ On first run a short setup step asks your name, your state, and that weekly numb
 afterwards from **Preferences** in the header. Nothing is sent anywhere, and the app never asks for
 a Social Security number — a browser-only app has nowhere safe to keep one.
 
+## Using an AI coding agent
+
+If you fork this and work on it with an AI agent, the instructions it needs are already here.
+[AGENTS.md](./AGENTS.md) holds them, and `CLAUDE.md` imports that same file, so Claude Code and any
+other agent that reads `AGENTS.md` get one set of rules rather than two that drift apart.
+
+They cover the things this codebase can't tell you by being read. Chiefly that its records are
+evidence in a benefits determination, so an agent must never generate, suggest, or autofill an
+activity entry — an invented employer or date is a fabricated record in a document going to a
+government agency. Alongside that are the invariants a reasonable-looking edit breaks quietly:
+requirement changes are effective-dated and never rescore past weeks, and activity ids are permanent
+because logged entries store them.
+
+Adding a state is the one job most forks need, so it ships as a skill at
+`.claude/skills/add-state-config/`. Ask Claude Code to add a state and it picks the skill up on its
+own. The reason it exists is worth stating plainly: a model's recollection of a state's work-search
+rules is not a verified value. Requirements change, counties get reclassified, activity lists get
+rewritten — so the skill's central instruction is that every field comes from the agency's live page
+read that day, or stays at its default. A field left blank beats a confidently wrong one, and the
+app surfaces a staleness notice rather than pretending otherwise.
+
+The skill format is Claude Code's. `AGENTS.md` is not tied to any particular tool, so if you use
+something else, that file still applies and you'd write the state-config workflow in whatever form
+your tool wants.
+
 ## Tech stack
 
 Vue 3 (`<script setup>`, TypeScript) + Vite, Vitest for unit tests, ESLint + Prettier. No backend,
