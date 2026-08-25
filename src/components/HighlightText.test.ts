@@ -16,7 +16,11 @@ describe('HighlightText', () => {
     const marks = wrapper.findAll('mark')
     expect(marks).toHaveLength(1)
     expect(marks[0].text()).toBe('Acme')
-    expect(wrapper.text()).toBe('Applied to Acme Corp')
+    // textContent rather than wrapper.text(): this component's root is a
+    // fragment, and Vue Test Utils trims each root node before joining them,
+    // which eats the spaces either side of the <mark>. The DOM is correct —
+    // only the helper's view of it isn't.
+    expect(wrapper.element.textContent).toBe('Applied to Acme Corp')
   })
 
   it('marks every occurrence of a repeated match', () => {
