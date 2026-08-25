@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { formatISODate } from '../lib/weeks'
 import type { Entry } from '../types'
+import { useSearch } from '../composables/useSearch'
+import HighlightText from './HighlightText.vue'
 
 const props = defineProps<{
   entry: Entry
@@ -12,13 +14,10 @@ const emit = defineEmits<{
   remove: [id: string]
 }>()
 
-const showDetails = ref(false)
+const { normalizedQuery: searchQuery, activeMatchId } = useSearch()
+const highlighted = computed(() => props.entry.id === activeMatchId.value)
 
-const summaryLine = computed(() =>
-  [formatISODate(props.entry.date), props.entry.employer, props.entry.siteAppliedOn]
-    .filter(Boolean)
-    .join(' · '),
-)
+const showDetails = ref(false)
 
 const hasDetails = computed(
   () =>
@@ -28,6 +27,16 @@ const hasDetails = computed(
     props.entry.contactName ||
     props.entry.result ||
     props.entry.notes,
+)
+
+// A search match can live in a collapsed detail field, so jumping to it has to
+// open the card — not just scroll to it — or the highlighted text stays hidden.
+watch(
+  highlighted,
+  (isHighlighted) => {
+    if (isHighlighted && hasDetails.value) showDetails.value = true
+  },
+  { immediate: true },
 )
 
 function toggleDetails() {
@@ -50,9 +59,16 @@ function handleRemove(entry: Entry) {
        "Details" button below, which is already fully keyboard-operable — so
        there's no missing keyboard equivalent here to add. -->
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div class="entry" :class="{ clickable: hasDetails }" @click="hasDetails && toggleDetails()">
+  <div
+    :id="`entry-${entry.id}`"
+    class="entry"
+    :class="{ clickable: hasDetails, highlighted }"
+    @click="hasDetails && toggleDetails()"
+  >
     <div class="entry-row">
-      <span class="activity">{{ entry.activity || '—' }}</span>
+      <span class="activity">
+        <HighlightText :text="entry.activity || '—'" :query="searchQuery" :active="highlighted" />
+      </span>
       <div class="entry-actions">
         <!-- Kept as a real button so the card stays keyboard-operable; the
              card-wide click is a convenience on top of it, not a replacement. -->
@@ -63,24 +79,44 @@ function handleRemove(entry: Entry) {
         <button class="icon-btn" title="Delete" @click.stop="handleRemove(entry)">✕</button>
       </div>
     </div>
-    <div class="summary">{{ summaryLine }}</div>
+    <div class="summary">
+      <span>{{ formatISODate(entry.date) }}</span>
+      <template v-if="entry.employer">
+        <span> · </span>
+        <HighlightText :text="entry.employer" :query="searchQuery" :active="highlighted" />
+      </template>
+      <template v-if="entry.siteAppliedOn">
+        <span> · </span>
+        <HighlightText :text="entry.siteAppliedOn" :query="searchQuery" :active="highlighted" />
+      </template>
+    </div>
 
     <div v-if="hasDetails" class="details" :class="{ collapsed: !showDetails }">
       <div v-if="entry.jobType" class="row">
-        <span class="label">Job sought</span> {{ entry.jobType }}
+        <span class="label">Job sought</span>
+        <HighlightText :text="entry.jobType" :query="searchQuery" :active="highlighted" />
       </div>
       <div v-if="entry.address" class="row">
-        <span class="label">Address</span> {{ entry.address }}
+        <span class="label">Address</span>
+        <HighlightText :text="entry.address" :query="searchQuery" :active="highlighted" />
       </div>
-      <div v-if="entry.phone" class="row"><span class="label">Phone</span> {{ entry.phone }}</div>
+      <div v-if="entry.phone" class="row">
+        <span class="label">Phone</span>
+        <HighlightText :text="entry.phone" :query="searchQuery" :active="highlighted" />
+      </div>
       <div v-if="entry.contactName" class="row">
-        <span class="label">Contact</span> {{ entry.contactName }}
+        <span class="label">Contact</span>
+        <HighlightText :text="entry.contactName" :query="searchQuery" :active="highlighted" />
         <span v-if="entry.contactMethod">({{ entry.contactMethod }})</span>
       </div>
       <div v-if="entry.result" class="row">
-        <span class="label">Result</span> {{ entry.result }}
+        <span class="label">Result</span>
+        <HighlightText :text="entry.result" :query="searchQuery" :active="highlighted" />
       </div>
-      <div v-if="entry.notes" class="row"><span class="label">Notes</span> {{ entry.notes }}</div>
+      <div v-if="entry.notes" class="row">
+        <span class="label">Notes</span>
+        <HighlightText :text="entry.notes" :query="searchQuery" :active="highlighted" />
+      </div>
     </div>
   </div>
 </template>
@@ -101,6 +137,10 @@ function handleRemove(entry: Entry) {
 }
 .entry.clickable:hover {
   border-color: var(--brass);
+}
+.entry.highlighted {
+  border-color: var(--stamp);
+  box-shadow: 0 0 0 1px var(--stamp);
 }
 .entry-row {
   display: flex;

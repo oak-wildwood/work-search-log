@@ -20,6 +20,7 @@ import EntryForm from './components/EntryForm.vue'
 import Toolbar from './components/Toolbar.vue'
 import EmptyState from './components/EmptyState.vue'
 import PreferencesDialog from './components/PreferencesDialog.vue'
+import SearchBar from './components/SearchBar.vue'
 
 const { entries, saveError, addEntry, updateEntry, removeEntry, clearAll, replaceAll } =
   useEntries()
@@ -120,6 +121,8 @@ const printedOn = computed(() => formatDate(new Date()))
   <PreferencesDialog :open="prefsOpen" :first-run="firstRun" @close="prefsOpen = false" />
 
   <main>
+    <SearchBar />
+
     <section class="print-only print-cover">
       <dl>
         <div>

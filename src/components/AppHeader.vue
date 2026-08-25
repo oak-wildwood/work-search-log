@@ -18,7 +18,7 @@ const current = computed(() => resolveRequirement(schedule.value, thisWeekKey.va
 
 /** What the preferences button shows, so the active setup is visible without opening it. */
 const summary = computed(() => {
-  const state = settings.value.stateCode ?? 'No state'
+  const state = settings.value.stateCode ?? 'Generic'
   const goal = current.value?.total ? `${current.value.total}/wk` : 'no goal'
   return `${state} · ${goal}`
 })

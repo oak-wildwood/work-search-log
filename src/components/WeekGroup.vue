@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { WeekGroup } from '../lib/weeks'
 import { outcomeClass, type WeekStatus } from '../lib/requirements'
 import { formatDate } from '../lib/weeks'
 import type { Entry } from '../types'
+import { useSearch } from '../composables/useSearch'
 import EntryCard from './EntryCard.vue'
 
 const props = defineProps<{
@@ -29,6 +30,18 @@ const badgeText = computed(() => {
 })
 
 const expanded = ref(props.defaultExpanded)
+
+const { activeMatchId } = useSearch()
+
+// Search navigation can land on an entry in a week that's collapsed (or was
+// never the first, auto-expanded one) — open it so the match is visible.
+watch(
+  activeMatchId,
+  (id) => {
+    if (id && props.group.entries.some((e) => e.id === id)) expanded.value = true
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
