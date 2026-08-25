@@ -2,6 +2,14 @@
   "name": "work-search-log",
   "private": true,
   "version": "0.0.0",
+  "description": "A local-only log for tracking job-search activity against a state's unemployment work-search requirements.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oak-wildwood/work-search-log.git"
+  },
+  "homepage": "https://oak-wildwood.github.io/work-search-log/",
+  "bugs": "https://github.com/oak-wildwood/work-search-log/issues",
   "type": "module",
   "scripts": {
     "start": "vite",
