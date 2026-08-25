@@ -8,6 +8,7 @@ import {
   resolveActivity,
 } from './index'
 import type { Entry } from '../types'
+import { parseLocalISO } from '../lib/weeks'
 
 function entry(partial: Partial<Entry>): Entry {
   return {
@@ -158,4 +159,135 @@ describe('resolveActivity', () => {
   it('returns null for an activity this state does not define', () => {
     expect(resolveActivity(tx, entry({ activity: 'Walked a dog' }))).toBeNull()
   })
+})
+
+// `normalizeConfig` is deliberately permissive at runtime — a bad config must never
+// stop someone recording what they did. These assert on the raw JSON instead, before
+// the fallbacks can paper over a contributor's mistake (e.g. `activity_type` instead
+// of `activity_types`, which would otherwise load, register, and render an empty
+// dropdown with no error anywhere).
+const KNOWN_CONFIG_KEYS = new Set([
+  'code',
+  'agency_name',
+  'agency_short',
+  'week_start_day',
+  'requirement_source',
+  'weekly_requirement',
+  'requirement_lookup_url',
+  'jurisdiction_label',
+  'claim_id_label',
+  'has_online_logging',
+  'activity_types',
+  'contact_methods',
+  'result_options',
+  'site_options',
+  'required_fields',
+  'duplicate_employer_counts',
+  'retention',
+  'official_log_url',
+  'rules_url',
+  'last_verified',
+])
+
+type RawStateConfig = Record<string, unknown>
+
+const rawStateModules = import.meta.glob('./states/*.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, RawStateConfig>
+
+describe('bundled config files (raw JSON, before normalization)', () => {
+  for (const [path, raw] of Object.entries(rawStateModules)) {
+    describe(path, () => {
+      it('has no unrecognized top-level keys', () => {
+        const unknown = Object.keys(raw).filter((key) => !KNOWN_CONFIG_KEYS.has(key))
+        expect(unknown, `${path} has unrecognized key(s): ${unknown.join(', ')}`).toEqual([])
+      })
+
+      it('defines at least one activity type, each with a non-empty id and label', () => {
+        const activities = Array.isArray(raw.activity_types) ? raw.activity_types : []
+        expect(
+          activities.length,
+          `${path}: activity_types must be a non-empty array`,
+        ).toBeGreaterThan(0)
+        activities.forEach((activity: unknown, i: number) => {
+          const rec = (activity ?? {}) as Record<string, unknown>
+          expect(
+            typeof rec.id === 'string' && rec.id.trim() !== '',
+            `${path}: activity_types[${i}] is missing a non-empty id`,
+          ).toBe(true)
+          expect(
+            typeof rec.label === 'string' && rec.label.trim() !== '',
+            `${path}: activity_types[${i}] (id: ${String(rec.id)}) is missing a non-empty label`,
+          ).toBe(true)
+        })
+      })
+
+      it('has unique activity ids', () => {
+        const activities = Array.isArray(raw.activity_types) ? raw.activity_types : []
+        const ids = activities.map((a: unknown) => (a as Record<string, unknown>)?.id)
+        const duplicates = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))]
+        expect(duplicates, `${path} has duplicate activity id(s): ${duplicates.join(', ')}`).toEqual(
+          [],
+        )
+      })
+
+      it('has a week_start_day that is an integer from 0 to 6', () => {
+        const value = raw.week_start_day
+        expect(
+          typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 6,
+          `${path}: week_start_day must be an integer 0-6, got ${JSON.stringify(value)}`,
+        ).toBe(true)
+      })
+
+      it('only sets weekly_requirement when requirement_source is "state"', () => {
+        const hasWeeklyRequirement =
+          Object.hasOwn(raw, 'weekly_requirement') && raw.weekly_requirement !== null
+        if (raw.requirement_source === 'state') {
+          expect(
+            hasWeeklyRequirement,
+            `${path}: requirement_source is "state" but weekly_requirement is missing`,
+          ).toBe(true)
+        } else {
+          expect(
+            hasWeeklyRequirement,
+            `${path}: requirement_source is "${String(raw.requirement_source)}", so weekly_requirement must not be set — it only applies where the state fixes a number for everybody`,
+          ).toBe(false)
+        }
+      })
+
+      // GENERIC_US isn't tied to any one agency's page, so it's the one config
+      // allowed to ship without a source to verify against — every real state
+      // config needs one.
+      it.skipIf(raw.code === GENERIC_US_CODE)(
+        'has a rules_url pointing at the agency source',
+        () => {
+          expect(
+            typeof raw.rules_url === 'string' && raw.rules_url.trim() !== '',
+            `${path}: rules_url is required — set it to the official page the values came from`,
+          ).toBe(true)
+        },
+      )
+
+      it.skipIf(raw.code === GENERIC_US_CODE)(
+        'has a parseable, non-future last_verified date',
+        () => {
+          const value = raw.last_verified
+          expect(
+            typeof value === 'string' && value.trim() !== '',
+            `${path}: last_verified is required`,
+          ).toBe(true)
+          const parsed = parseLocalISO(value as string)
+          expect(
+            !Number.isNaN(parsed.getTime()),
+            `${path}: last_verified "${String(value)}" is not a parseable date`,
+          ).toBe(true)
+          expect(
+            parsed.getTime() <= Date.now(),
+            `${path}: last_verified "${String(value)}" is in the future`,
+          ).toBe(true)
+        },
+      )
+    })
+  }
 })
