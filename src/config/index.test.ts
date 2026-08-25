@@ -227,9 +227,10 @@ describe('bundled config files (raw JSON, before normalization)', () => {
         const activities = Array.isArray(raw.activity_types) ? raw.activity_types : []
         const ids = activities.map((a: unknown) => (a as Record<string, unknown>)?.id)
         const duplicates = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))]
-        expect(duplicates, `${path} has duplicate activity id(s): ${duplicates.join(', ')}`).toEqual(
-          [],
-        )
+        expect(
+          duplicates,
+          `${path} has duplicate activity id(s): ${duplicates.join(', ')}`,
+        ).toEqual([])
       })
 
       it('has a week_start_day that is an integer from 0 to 6', () => {
