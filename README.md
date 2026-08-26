@@ -128,6 +128,9 @@ your tool wants.
 Vue 3 (`<script setup>`, TypeScript) + Vite, Vitest for unit tests, ESLint + Prettier. No backend,
 no state-management library — a couple of small composables over `localStorage` cover it.
 
+The reasoning behind these choices — and the ones that most look like they could be simplified
+away — is recorded in [`docs/decisions/`](./docs/decisions/).
+
 ```
 src/
   config/       per-state JSON rules, plus the loader that validates and resolves them
