@@ -30,3 +30,6 @@ CLAUDE.local.md
 
 # Coverage output
 coverage
+
+# Vercel CLI local state
+.vercel

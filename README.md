@@ -67,6 +67,13 @@ share them with anyone.
 > workflow hadn't run yet when Pages was first enabled. Push any commit (or re-run the workflow
 > manually) and it self-corrects.
 
+### Pull request previews (optional)
+
+`vercel.json` is here so pull requests get a preview URL. It's entirely optional — connect the repo
+in Vercel and previews start appearing on PRs; ignore it and nothing changes. GitHub Pages stays
+the production deploy either way, which is what `deploymentEnabled.main: false` in that file is
+for.
+
 ## Adapting it for your state
 
 Everything state-specific lives in a JSON file under `src/config/states/` — activity types and how
