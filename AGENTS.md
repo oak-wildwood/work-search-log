@@ -80,8 +80,34 @@ Adding support for a new state is a defined workflow with its own skill — see
 `.claude/skills/add-state-config/`. Don't hand-roll it.
 
 Before opening a PR, run the checks listed at the bottom of [CONTRIBUTING.md](./CONTRIBUTING.md).
-Formatting is not yet enforced in CI, so run the formatter even though nothing will catch you.
 
 Work on a branch and open a PR; `main` is protected by CI and deploys to GitHub Pages on merge.
 Open issues carry the current engineering backlog and explain the reasoning behind each change —
 read the relevant one before starting work it touches.
+
+### PR titles become commit messages
+
+This repo squash-merges, and the squashed commit takes the **PR title** as its subject with an
+empty body. So the PR title is not a label on a discussion — it is the permanent record of the
+change in `git log`, and it is the only part that survives the merge.
+
+Write it as a conventional commit: `type: imperative summary`, lowercase after the colon, no
+trailing period, under about 70 characters.
+
+```
+feat: add per-week employer contact minimum
+fix: stop the week badge rendering on the printed sheet
+test: add component coverage for EntryForm
+docs: record the effective-dating decision as an ADR
+ci: enforce Prettier formatting
+refactor: extract the print cover sheet from App.vue
+chore: bump vite to 8.2
+```
+
+Use `feat` and `fix` for changes a claimant would notice, and `refactor` for ones they wouldn't.
+`test`, `docs`, `ci` and `chore` cover the rest. When a change spans several types, name the one
+that carries the point of the PR rather than the one touching the most files.
+
+Individual commits on the branch don't survive the squash, so they're for the reviewer rather than
+for history. Use them to separate things worth reviewing apart — a mechanical reformat from a
+behavioural change, say — and don't agonise over their wording.
