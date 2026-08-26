@@ -26,7 +26,7 @@ jobs:
       actions: read # Required for Claude to read CI results on PRs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -40,10 +40,19 @@ jobs:
           additional_permissions: |
             actions: read
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
-
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr *)'
+          # Without a package manager the agent cannot run the tests, linter
+          # or formatter, so it writes code it has no way to check. Every
+          # defect found across the first four agent runs traced to this:
+          # a failing assertion in #21, a lint failure in #22, and in #13 a
+          # set of coverage thresholds guessed at thirty points below the
+          # real figure because the report could not be generated.
+          #
+          # gh pr create is here because the action otherwise pushes a branch
+          # and leaves a "Create PR" link, even when asked directly to open
+          # one.
+          #
+          # Note the agent still cannot edit files under .github/workflows/ —
+          # its token lacks workflow-write permission. Expect it to stop and
+          # say so rather than work around it.
+          claude_args: >-
+            --allowedTools "Bash(npm:*),Bash(npx:*),Bash(gh pr create:*),Bash(gh pr view:*)"
