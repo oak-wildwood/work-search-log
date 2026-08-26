@@ -52,8 +52,13 @@ jobs:
             *.) fail "Drop the trailing period — commit subjects don't take one." ;;
           esac
 
-          if [ "${#TITLE}" -gt 72 ]; then
-            fail "Title is ${#TITLE} characters; keep it under 72 so git log stays readable."
+          # 66 rather than 72 because GitHub appends " (#123)" to the squashed
+          # subject, and that suffix is what makes the commit findable from a
+          # terminal — the body is blank, so the number is the only thread back
+          # to the pull request. Budgeting for it here keeps the finished
+          # subject inside the conventional 72.
+          if [ "${#TITLE}" -gt 66 ]; then
+            fail "Title is ${#TITLE} characters; keep it to 66 so the subject stays under 72 once GitHub appends the PR number."
           fi
 
           printf '%s\n' "Title is fine: $TITLE"
