@@ -10,9 +10,15 @@ function makeId(): string {
 }
 
 const storedEntries = readJSON<Entry[] | null>(STORAGE_KEY, null)
-// Dev server only, and only on first run — a production build never sees
-// this, and clearing storage or clicking "Clear all" doesn't bring it back.
-const seeded = storedEntries === null && import.meta.env.DEV
+// Dev server or an explicit opt-in flag, and only on first run — clearing
+// storage or clicking "Clear all" doesn't bring it back. The flag is never
+// set for the GitHub Pages build, only (by hand, in the dashboard) for Vercel
+// preview deploys, so a claimant using the real app never sees it. Vite
+// inlines env vars as strings, so this compares against the literal '1'
+// rather than truthiness — '0' and 'false' are both non-empty strings and
+// would otherwise turn seeding on when they plainly mean off.
+const seeded =
+  storedEntries === null && (import.meta.env.DEV || import.meta.env.VITE_DEMO_DATA === '1')
 
 // Module-level state: every component calling useEntries() shares one store,
 // with no need for provide/inject or a state-management library.
@@ -58,5 +64,14 @@ function replaceAll(next: Entry[]) {
 }
 
 export function useEntries() {
-  return { entries, saveError, addEntry, updateEntry, removeEntry, clearAll, replaceAll }
+  return {
+    entries,
+    saveError,
+    isDemoData: seeded,
+    addEntry,
+    updateEntry,
+    removeEntry,
+    clearAll,
+    replaceAll,
+  }
 }

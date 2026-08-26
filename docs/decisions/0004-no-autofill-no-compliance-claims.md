@@ -21,7 +21,13 @@ Two hard rules, enforced in code and in review, not just in prose:
   placeholder, not an autocomplete suggestion drawn from prior entries. Prefilling the claimant's
   own profile data (their name) is fine; inventing a plausible employer, date, or activity is not,
   under any framing. The one seeded fixture (`src/lib/seedEntries.ts`) is fenced behind
-  `import.meta.env.DEV` and stays that way — a production build starts empty.
+  `import.meta.env.DEV` or an explicit `VITE_DEMO_DATA=1` opt-in (compared against the literal
+  string `'1'`, since Vite inlines env vars as strings and `'0'`/`'false'` are both truthy). That
+  flag is set by hand, scoped to Vercel's Preview environment only, so a PR preview shows reviewers
+  a populated log; it is never set for the GitHub Pages build a claimant actually uses, so that
+  build still starts empty. Whenever seeding is active — including `npm run dev` — `App.vue` shows
+  a `no-print` banner stating plainly that the entries are sample data and not a real record, so
+  nobody handed a preview link has to guess which they're looking at.
 - **Never assert compliance.** Copy reports what was logged ("3 of 4 logged"), never a judgment
   ("you've met your requirement", "you're compliant this week"). This is why every scoring badge
   and cap warning in `WeekGroup.vue` carries the `no-print` class: the printed sheet is what an

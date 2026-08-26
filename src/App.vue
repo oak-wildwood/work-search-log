@@ -15,6 +15,7 @@ import {
 import { evaluateWeeks, outcomeClass, type WeekStatus } from './lib/requirements'
 import type { Entry, EntryDraft } from './types'
 import AppHeader from './components/AppHeader.vue'
+import DemoDataBanner from './components/DemoDataBanner.vue'
 import WeekGroup from './components/WeekGroup.vue'
 import EntryForm from './components/EntryForm.vue'
 import Toolbar from './components/Toolbar.vue'
@@ -116,6 +117,7 @@ const printedOn = computed(() => formatDate(new Date()))
 </script>
 
 <template>
+  <DemoDataBanner />
   <AppHeader @open-preferences="prefsOpen = true" />
 
   <PreferencesDialog :open="prefsOpen" :first-run="firstRun" @close="prefsOpen = false" />
