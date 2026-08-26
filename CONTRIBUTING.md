@@ -38,23 +38,23 @@ Please don't guess. A field left at its default is better than a confidently wro
 
 ### The fields
 
-| Field                                                 | What it does                                                                                                                                                  |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `code`                                                | Postal code, uppercase. `GENERIC_US` is reserved for the fallback.                                                                                            |
-| `agency_name` / `agency_short`                        | Agency names, used in on-screen copy.                                                                                                                         |
-| `week_start_day`                                      | 0 = Sunday. Decides where weeks are cut.                                                                                                                      |
-| `requirement_source`                                  | `state`, `county`, or `letter`. Anything but `state` makes the app push people to their determination letter for the weekly count.                            |
-| `weekly_requirement`                                  | The weekly count, where the state fixes one for everybody. Only read when `requirement_source` is `state`, and only ever offered as a starting value.        |
-| `requirement_lookup_url`                              | Where someone looks up their own number when the state doesn't fix one — e.g. TWC's table of required activities by county.                                   |
-| `jurisdiction_label`                                  | What the state calls the local unit — County, WorkSource office, workforce area.                                                                              |
-| `claim_id_label`                                      | What the state calls the claim identifier.                                                                                                                    |
-| `has_online_logging`                                  | `true` if the state records work search in its own portal, which makes this tool a backup copy rather than the record.                                        |
-| `activity_types`                                      | The activities the state recognizes. See below.                                                                                                               |
-| `contact_methods` / `result_options` / `site_options` | Dropdown choices.                                                                                                                                             |
-| `required_fields`                                     | Which fields the state's own log asks for. **Not wired to the UI yet** — it's recorded data, and the form currently requires only date and activity. `date` is always included whatever you put here.  |
-| `duplicate_employer_counts`                           | `false` if repeat contact with the same employer in one week may not count twice. Produces a warning only — never blocks.                                     |
-| `retention`                                           | How long the record must be kept, as a phrase completing "Keep this ___" — e.g. `for your entire benefit year`.                                               |
-| `official_log_url` / `rules_url`                      | Links to the agency's own printable log form and its rules page. Both are shown to the claimant.                                                              |
+| Field                                                 | What it does                                                                                                                                                                                          |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `code`                                                | Postal code, uppercase. `GENERIC_US` is reserved for the fallback.                                                                                                                                    |
+| `agency_name` / `agency_short`                        | Agency names, used in on-screen copy.                                                                                                                                                                 |
+| `week_start_day`                                      | 0 = Sunday. Decides where weeks are cut.                                                                                                                                                              |
+| `requirement_source`                                  | `state`, `county`, or `letter`. Anything but `state` makes the app push people to their determination letter for the weekly count.                                                                    |
+| `weekly_requirement`                                  | The weekly count, where the state fixes one for everybody. Only read when `requirement_source` is `state`, and only ever offered as a starting value.                                                 |
+| `requirement_lookup_url`                              | Where someone looks up their own number when the state doesn't fix one — e.g. TWC's table of required activities by county.                                                                           |
+| `jurisdiction_label`                                  | What the state calls the local unit — County, WorkSource office, workforce area.                                                                                                                      |
+| `claim_id_label`                                      | What the state calls the claim identifier.                                                                                                                                                            |
+| `has_online_logging`                                  | `true` if the state records work search in its own portal, which makes this tool a backup copy rather than the record.                                                                                |
+| `activity_types`                                      | The activities the state recognizes. See below.                                                                                                                                                       |
+| `contact_methods` / `result_options` / `site_options` | Dropdown choices.                                                                                                                                                                                     |
+| `required_fields`                                     | Which fields the state's own log asks for. **Not wired to the UI yet** — it's recorded data, and the form currently requires only date and activity. `date` is always included whatever you put here. |
+| `duplicate_employer_counts`                           | `false` if repeat contact with the same employer in one week may not count twice. Produces a warning only — never blocks.                                                                             |
+| `retention`                                           | How long the record must be kept, as a phrase completing "Keep this ___" — e.g. `for your entire benefit year`.                                                                                       |
+| `official_log_url` / `rules_url`                      | Links to the agency's own printable log form and its rules page. Both are shown to the claimant.                                                                                                      |
 
 ### Activity types
 
@@ -99,5 +99,29 @@ Worth keeping if you fork it:
 ```bash
 npm run test
 npm run lint
+npm run format:check
 npm run build
 ```
+
+## Naming a pull request
+
+This repo squash-merges, and the squashed commit takes the PR title as its subject. So the title
+you give a PR is what lands in `git log` permanently — it's the record, not a label on a
+discussion.
+
+Write it as a conventional commit: `type: imperative summary`, lowercase after the colon, no
+trailing period, 66 characters or fewer. Seven types, no more: `feat`, `fix`, `refactor`, `test`,
+`docs`, `ci`, `chore`.
+
+The 66 leaves room for the ` (#123)` GitHub appends when squashing, which keeps the finished
+subject under the conventional 72. Leave that suffix alone when you merge — the commit body is
+blank, so the number is the only way back from a commit to the discussion that produced it.
+
+```
+feat: add per-week employer contact minimum
+fix: stop the week badge rendering on the printed sheet
+docs: record the effective-dating decision as an ADR
+```
+
+[AGENTS.md](./AGENTS.md) has the full table with what each type covers. It's written for AI coding
+agents, but the convention is the same one whoever is typing.
