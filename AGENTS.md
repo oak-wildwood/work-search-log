@@ -80,8 +80,43 @@ Adding support for a new state is a defined workflow with its own skill — see
 `.claude/skills/add-state-config/`. Don't hand-roll it.
 
 Before opening a PR, run the checks listed at the bottom of [CONTRIBUTING.md](./CONTRIBUTING.md).
-Formatting is not yet enforced in CI, so run the formatter even though nothing will catch you.
 
 Work on a branch and open a PR; `main` is protected by CI and deploys to GitHub Pages on merge.
 Open issues carry the current engineering backlog and explain the reasoning behind each change —
 read the relevant one before starting work it touches.
+
+### PR titles become commit messages
+
+This repo squash-merges, and the squashed commit takes the **PR title** as its subject with an
+empty body. So the PR title is not a label on a discussion — it is the permanent record of the
+change in `git log`, and it is the only part that survives the merge.
+
+Write it as a conventional commit: `type: imperative summary`, lowercase after the colon, no
+trailing period, under about 70 characters.
+
+These seven types are the whole set. Don't invent an eighth.
+
+| Type       | Use it for                                                | Example                                                   |
+| ---------- | --------------------------------------------------------- | --------------------------------------------------------- |
+| `feat`     | Something a claimant can now do that they couldn't        | `feat: add per-week employer contact minimum`             |
+| `fix`      | Behaviour a claimant would notice was wrong               | `fix: stop the week badge rendering on the printed sheet` |
+| `refactor` | Restructuring with no change a claimant would notice      | `refactor: extract the print cover sheet from App.vue`    |
+| `test`     | Tests, test infrastructure, fixtures                      | `test: add component coverage for EntryForm`              |
+| `docs`     | README, CONTRIBUTING, ADRs, this file                     | `docs: record the effective-dating decision as an ADR`    |
+| `ci`       | CI workflows, build config, lint and format setup         | `ci: enforce Prettier formatting`                         |
+| `chore`    | Dependency bumps and housekeeping that fits nothing above | `chore: bump vite to 8.2`                                 |
+
+The `feat`/`fix` versus `refactor` split is the one that matters: it's the line between changes a
+claimant would notice and changes only we would. Everything else is filing.
+
+When a change spans several types, name the one that carries the point of the PR rather than the
+one touching the most files. A refactor that needed twenty new tests is still `refactor`.
+
+Deliberately absent, so nobody has to wonder: no `style`, because Prettier is enforced in CI and a
+formatting-only change is `chore`; no `build` separate from `ci`, because here they're the same
+concern; no `perf`, because a local-only app has no performance work worth its own category — if
+that ever changes, add it then rather than reserving it now.
+
+Individual commits on the branch don't survive the squash, so they're for the reviewer rather than
+for history. Use them to separate things worth reviewing apart — a mechanical reformat from a
+behavioural change, say — and don't agonise over their wording.

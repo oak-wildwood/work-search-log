@@ -102,3 +102,21 @@ npm run lint
 npm run format:check
 npm run build
 ```
+
+## Naming a pull request
+
+This repo squash-merges, and the squashed commit takes the PR title as its subject. So the title
+you give a PR is what lands in `git log` permanently — it's the record, not a label on a
+discussion.
+
+Write it as a conventional commit: `type: imperative summary`, lowercase after the colon, no
+trailing period. Seven types, no more: `feat`, `fix`, `refactor`, `test`, `docs`, `ci`, `chore`.
+
+```
+feat: add per-week employer contact minimum
+fix: stop the week badge rendering on the printed sheet
+docs: record the effective-dating decision as an ADR
+```
+
+[AGENTS.md](./AGENTS.md) has the full table with what each type covers. It's written for AI coding
+agents, but the convention is the same one whoever is typing.
