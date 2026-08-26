@@ -5,7 +5,7 @@ import vueTsEslintConfig from '@vue/eslint-config-typescript'
 import eslintConfigPrettier from '@vue/eslint-config-prettier'
 
 export default [
-  { ignores: ['dist/**', 'node_modules/**'] },
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
   js.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
   ...pluginVueA11y.configs['flat/recommended'],
