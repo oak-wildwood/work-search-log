@@ -19,9 +19,10 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pull-requests: read
-      issues: read
+      # write, not read: the agent pushes a branch and opens a pull request.
+      contents: write
+      pull-requests: write
+      issues: write
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
@@ -40,19 +41,8 @@ jobs:
           additional_permissions: |
             actions: read
 
-          # Without a package manager the agent cannot run the tests, linter
-          # or formatter, so it writes code it has no way to check. Every
-          # defect found across the first four agent runs traced to this:
-          # a failing assertion in #21, a lint failure in #22, and in #13 a
-          # set of coverage thresholds guessed at thirty points below the
-          # real figure because the report could not be generated.
-          #
-          # gh pr create is here because the action otherwise pushes a branch
-          # and leaves a "Create PR" link, even when asked directly to open
-          # one.
-          #
-          # Note the agent still cannot edit files under .github/workflows/ —
-          # its token lacks workflow-write permission. Expect it to stop and
-          # say so rather than work around it.
+          # npm/npx so the agent can run the suite on its own work; gh pr
+          # create because the action otherwise only leaves a "Create PR" link.
+          # It still cannot edit .github/workflows/ — that's a token limit.
           claude_args: >-
             --allowedTools "Bash(npm:*),Bash(npx:*),Bash(gh pr create:*),Bash(gh pr view:*)"
