@@ -1,24 +1,13 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { nextTick, type Component } from 'vue'
+import { nextTick } from 'vue'
+import App from './App.vue'
 import { useSettings } from './composables/useSettings'
-
-let App: Component
-
-beforeAll(async () => {
-  // jsdom has no matchMedia, which the theme composable reads at import time.
-  window.matchMedia = vi.fn().mockReturnValue({
-    matches: false,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  }) as unknown as typeof window.matchMedia
-  App = (await import('./App.vue')).default
-})
 
 describe('App', () => {
   it('starts with no weekly requirement rather than presuming one', () => {
     const wrapper = mount(App)
-    const goal = wrapper.find('input[type="number"]')
+    const goal = wrapper.find('[data-testid="weekly-requirement"]')
     expect((goal.element as HTMLInputElement).value).toBe('')
     expect(wrapper.text()).toContain('set your weekly requirement')
     expect(wrapper.text()).not.toContain('of 3 logged')

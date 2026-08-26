@@ -122,7 +122,13 @@ function dismiss() {
 
       <label class="field">
         <span class="label">Activities required each week</span>
-        <input v-model.number="draftCount" type="number" min="1" placeholder="—" />
+        <input
+          v-model.number="draftCount"
+          type="number"
+          min="1"
+          placeholder="—"
+          data-testid="weekly-requirement"
+        />
         <span class="hint">
           {{ countHint }}
           <a
