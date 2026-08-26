@@ -110,7 +110,12 @@ you give a PR is what lands in `git log` permanently — it's the record, not a 
 discussion.
 
 Write it as a conventional commit: `type: imperative summary`, lowercase after the colon, no
-trailing period. Seven types, no more: `feat`, `fix`, `refactor`, `test`, `docs`, `ci`, `chore`.
+trailing period, 66 characters or fewer. Seven types, no more: `feat`, `fix`, `refactor`, `test`,
+`docs`, `ci`, `chore`.
+
+The 66 leaves room for the ` (#123)` GitHub appends when squashing, which keeps the finished
+subject under the conventional 72. Leave that suffix alone when you merge — the commit body is
+blank, so the number is the only way back from a commit to the discussion that produced it.
 
 ```
 feat: add per-week employer contact minimum
