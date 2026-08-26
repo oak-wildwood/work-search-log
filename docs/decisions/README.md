@@ -12,3 +12,4 @@ growing sections, that's usually a sign it's actually two decisions.
 3. [State rules as runtime-normalized JSON](./0003-runtime-normalized-state-config.md)
 4. [No autofill, no compliance claims](./0004-no-autofill-no-compliance-claims.md)
 5. [Effective-dated requirement schedule](./0005-effective-dated-requirements.md)
+6. [Agent instructions in one file, with procedure in a skill](./0006-agent-instructions-layering.md)
