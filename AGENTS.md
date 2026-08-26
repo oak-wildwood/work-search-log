@@ -92,12 +92,13 @@ empty body. So the PR title is not a label on a discussion — it is the permane
 change in `git log`, and it is the only part that survives the merge.
 
 Write it as a conventional commit: `type: imperative summary`, lowercase after the colon, no
-trailing period, 66 characters or fewer.
+trailing period, 72 characters or fewer.
 
-66 rather than the conventional 72 because GitHub appends ` (#123)` to the squashed subject. Leave
-that suffix in place when you merge — the commit body is blank, so the pull request number is the
-only thread from a commit back to the reasoning behind it. `.github/workflows/pr-title.yml`
-enforces the limit.
+GitHub appends ` (#123)` to the squashed subject, so 72 here lands the finished subject around 79 —
+inside the 80 columns that actually matter. The limit is there to catch an essay, not to shorten a
+title that is doing useful work. Leave the suffix in place when you merge: the commit body is
+blank, so the number is the only thread from a commit back to the reasoning behind it.
+`.github/workflows/pr-title.yml` enforces this.
 
 These seven types are the whole set. Don't invent an eighth.
 
