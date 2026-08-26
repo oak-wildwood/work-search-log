@@ -94,19 +94,28 @@ change in `git log`, and it is the only part that survives the merge.
 Write it as a conventional commit: `type: imperative summary`, lowercase after the colon, no
 trailing period, under about 70 characters.
 
-```
-feat: add per-week employer contact minimum
-fix: stop the week badge rendering on the printed sheet
-test: add component coverage for EntryForm
-docs: record the effective-dating decision as an ADR
-ci: enforce Prettier formatting
-refactor: extract the print cover sheet from App.vue
-chore: bump vite to 8.2
-```
+These seven types are the whole set. Don't invent an eighth.
 
-Use `feat` and `fix` for changes a claimant would notice, and `refactor` for ones they wouldn't.
-`test`, `docs`, `ci` and `chore` cover the rest. When a change spans several types, name the one
-that carries the point of the PR rather than the one touching the most files.
+| Type       | Use it for                                                | Example                                                   |
+| ---------- | --------------------------------------------------------- | --------------------------------------------------------- |
+| `feat`     | Something a claimant can now do that they couldn't        | `feat: add per-week employer contact minimum`             |
+| `fix`      | Behaviour a claimant would notice was wrong               | `fix: stop the week badge rendering on the printed sheet` |
+| `refactor` | Restructuring with no change a claimant would notice      | `refactor: extract the print cover sheet from App.vue`    |
+| `test`     | Tests, test infrastructure, fixtures                      | `test: add component coverage for EntryForm`              |
+| `docs`     | README, CONTRIBUTING, ADRs, this file                     | `docs: record the effective-dating decision as an ADR`    |
+| `ci`       | CI workflows, build config, lint and format setup         | `ci: enforce Prettier formatting`                         |
+| `chore`    | Dependency bumps and housekeeping that fits nothing above | `chore: bump vite to 8.2`                                 |
+
+The `feat`/`fix` versus `refactor` split is the one that matters: it's the line between changes a
+claimant would notice and changes only we would. Everything else is filing.
+
+When a change spans several types, name the one that carries the point of the PR rather than the
+one touching the most files. A refactor that needed twenty new tests is still `refactor`.
+
+Deliberately absent, so nobody has to wonder: no `style`, because Prettier is enforced in CI and a
+formatting-only change is `chore`; no `build` separate from `ci`, because here they're the same
+concern; no `perf`, because a local-only app has no performance work worth its own category — if
+that ever changes, add it then rather than reserving it now.
 
 Individual commits on the branch don't survive the squash, so they're for the reviewer rather than
 for history. Use them to separate things worth reviewing apart — a mechanical reformat from a
