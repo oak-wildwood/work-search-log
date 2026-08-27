@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { WeekGroup } from '../lib/weeks'
 import { outcomeClass, type WeekStatus } from '../lib/requirements'
-import { formatDate } from '../lib/weeks'
+import { formatWeekRange } from '../lib/weeks'
 import type { Entry } from '../types'
 import { useSearch } from '../composables/useSearch'
 import EntryCard from './EntryCard.vue'
@@ -48,7 +48,7 @@ watch(
   <div class="week-block">
     <button class="week-head" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
       <span class="caret">{{ expanded ? '▾' : '▸' }}</span>
-      <span class="week-title">{{ formatDate(group.start) }} – {{ formatDate(group.end) }}</span>
+      <span class="week-title">{{ formatWeekRange(group.start, group.end) }}</span>
       <span class="week-meta">
         <span class="week-activity-count">
           {{ group.entries.length }} {{ group.entries.length === 1 ? 'activity' : 'activities' }}
@@ -92,8 +92,9 @@ watch(
 .week-head {
   width: 100%;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px 8px;
   border: none;
   border-bottom: 1px solid var(--line);
   background: none;
@@ -105,7 +106,7 @@ watch(
 }
 .caret {
   color: var(--brass);
-  font-size: 11px;
+  font-size: 18px;
   flex: 0 0 auto;
 }
 .week-title {
@@ -113,6 +114,7 @@ watch(
   font-weight: 600;
   font-size: 16px;
   color: var(--green-deep);
+  white-space: nowrap;
 }
 .week-meta {
   margin-left: auto;
@@ -121,14 +123,16 @@ watch(
   gap: 10px;
 }
 .week-activity-count {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
+  white-space: nowrap;
 }
 .week-count {
-  font-size: 12px;
+  font-size: 13px;
   padding: 3px 8px;
   border-radius: 10px;
   border: 1px solid var(--line);
+  white-space: nowrap;
 }
 .week-count.ok {
   color: var(--ok);
@@ -144,13 +148,30 @@ watch(
   color: var(--muted);
 }
 .week-note {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin: -4px 0 8px;
   line-height: 1.5;
 }
 .week-note.warn {
   color: var(--warn);
+}
+@media (max-width: 480px) {
+  .week-title {
+    font-size: 15px;
+  }
+  .week-meta {
+    /* The shorter week-range format usually leaves enough room for this to
+       share the first line; `nowrap` above on the title and count text is
+       what actually prevents the internal splitting bug this used to force
+       a second row to avoid, so it's safe to let it share the line when
+       there's space and drop to its own line (as one unit) when there isn't. */
+    margin-left: auto;
+  }
+  .week-activity-count,
+  .week-count {
+    font-size: 12px;
+  }
 }
 @media print {
   .week-head {

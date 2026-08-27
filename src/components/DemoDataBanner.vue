@@ -14,10 +14,15 @@ import { DEMO_DATA_ENABLED } from '../lib/demoMode'
 
 <style scoped>
 .demo-banner {
+  position: sticky;
+  top: 0;
+  /* Below the preferences dialog overlay (z-index: 50) so opening it still
+     covers this. */
+  z-index: 10;
   background: var(--warn);
   color: var(--paper);
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   padding: 8px 12px;
   margin: 0;

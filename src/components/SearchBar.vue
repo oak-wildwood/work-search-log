@@ -83,7 +83,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 .search-icon {
   color: var(--brass);
-  font-size: 14px;
+  font-size: 24px;
   flex: 0 0 auto;
 }
 .search-input {
@@ -92,7 +92,7 @@ function onKeydown(e: KeyboardEvent) {
   border: none;
   background: none;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink);
   padding: 2px 0;
 }
@@ -109,7 +109,7 @@ function onKeydown(e: KeyboardEvent) {
   flex: 0 0 auto;
 }
 .search-count {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
   margin-right: 4px;
@@ -120,9 +120,9 @@ function onKeydown(e: KeyboardEvent) {
   background: none;
   color: var(--brass);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
-  padding: 4px 5px;
+  padding: 5px 6px;
   border-radius: 3px;
 }
 .nav-btn:hover:not(:disabled),
@@ -135,7 +135,7 @@ function onKeydown(e: KeyboardEvent) {
   cursor: default;
 }
 .clear-btn {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 </style>

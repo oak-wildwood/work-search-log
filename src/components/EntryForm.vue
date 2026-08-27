@@ -302,7 +302,7 @@ h2 {
   color: var(--green-deep);
 }
 .hint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin: 0;
   min-height: 14px;
@@ -317,7 +317,7 @@ h2 {
 }
 .field label {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--brass);
@@ -341,7 +341,7 @@ select,
 textarea {
   width: 100%;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   padding: 8px 9px;
   border: 1px solid var(--line);
   border-radius: 3px;
@@ -366,7 +366,7 @@ textarea {
   border-radius: 3px;
   background: var(--card);
   cursor: pointer;
-  font-size: 15px;
+  font-size: 16px;
   opacity: 0.45;
   filter: grayscale(1);
   transition:
@@ -394,7 +394,7 @@ textarea {
   padding: 11px;
   font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.04em;
   border-radius: 3px;
   cursor: pointer;
@@ -409,7 +409,7 @@ textarea {
   color: var(--brass);
   padding: 9px 14px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   border-radius: 3px;
   cursor: pointer;
 }

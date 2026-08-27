@@ -30,10 +30,13 @@ const summary = computed(() => {
       <h1>Work Search Log</h1>
       <!-- The agency name comes from the selected state, which is what used to
            require a separate branch per state. -->
-      <span class="eyebrow">{{ config.agencyName }}</span>
-      <span v-if="settings.name" class="claimant">{{ settings.name }}</span>
+      <span class="eyebrow">
+        <span class="eyebrow-full">{{ config.agencyName }}</span>
+        <span class="eyebrow-short">{{ config.agencyShort }}</span>
+      </span>
     </div>
     <div class="header-controls no-print">
+      <span v-if="settings.name" class="claimant">{{ settings.name }}</span>
       <button
         class="prefs-btn"
         type="button"
@@ -80,27 +83,34 @@ h1 {
   letter-spacing: -0.01em;
 }
 .eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--brass);
+}
+.eyebrow-short {
+  display: none;
 }
 .header-controls {
   display: flex;
   align-items: center;
   gap: 14px;
+  /* On a single row with the title (desktop), this pushes the controls to
+     the right edge to pair with `justify-content: space-between` above. */
+  margin-left: auto;
 }
 .claimant {
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
 }
 .prefs-btn {
   display: flex;
   align-items: center;
   gap: 7px;
   font: inherit;
-  font-size: 12px;
-  padding: 5px 10px;
+  font-size: 13px;
+  padding: 7px 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
@@ -111,7 +121,7 @@ h1 {
   border-color: var(--brass);
 }
 .prefs-gear {
-  font-size: 13px;
+  font-size: 20px;
   line-height: 1;
 }
 .prefs-summary {
@@ -119,19 +129,40 @@ h1 {
   color: var(--ink);
 }
 .theme-toggle {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--card);
   color: var(--brass);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1;
 }
 .theme-toggle:hover {
   border-color: var(--brass);
+}
+
+@media (max-width: 480px) {
+  /* Once the controls drop to their own line under the title, right-aligning
+     them (correct on the single-row desktop layout) is the only thing on the
+     page not flush with the left margin — everything else in the app reads
+     top-to-bottom from the same left edge. Left-aligning here instead keeps
+     that rhythm and needs no other layout changes. */
+  .header-controls {
+    margin-left: 0;
+  }
+  /* The agency's short form (e.g. "TWC") is already the identity this app
+     uses for it elsewhere (footer, notices) — using it here too instead of
+     the full name reads better at this width than either the long form or a
+     truncated version of it. */
+  .eyebrow-full {
+    display: none;
+  }
+  .eyebrow-short {
+    display: inline;
+  }
 }
 
 @media print {

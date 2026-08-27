@@ -57,8 +57,7 @@ function mountWeek(props: Partial<Record<string, unknown>> = {}) {
 describe('WeekGroup', () => {
   it('heads the week with its date range and activity count', () => {
     const text = mountWeek().get('.week-head').text()
-    expect(text).toContain('Aug 23')
-    expect(text).toContain('Aug 29')
+    expect(text).toContain('Aug 23–29')
     expect(text).toContain('3 activities')
   })
 

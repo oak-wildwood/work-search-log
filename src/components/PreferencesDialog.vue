@@ -196,7 +196,7 @@ h2 {
   margin: 0 0 4px;
 }
 .lede {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   margin: 0 0 16px;
 }
@@ -212,7 +212,7 @@ h2 {
   justify-content: space-between;
 }
 .label {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--brass);
@@ -220,7 +220,7 @@ h2 {
 input,
 select {
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   padding: 7px 9px;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -228,7 +228,7 @@ select {
   color: inherit;
 }
 .hint {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -237,7 +237,7 @@ select {
   white-space: nowrap;
 }
 .privacy {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   color: var(--muted);
   border-top: 1px solid var(--line);
@@ -251,7 +251,7 @@ select {
 }
 button {
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   padding: 8px 14px;
   border-radius: 4px;
   cursor: pointer;
