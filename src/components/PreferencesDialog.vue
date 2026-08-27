@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useSettings } from '../composables/useSettings'
 import { useTheme } from '../composables/useTheme'
 import { getStateConfig, listStateConfigs } from '../config'
@@ -50,12 +50,6 @@ function reset() {
   enteredCount.value = resolveRequirement(schedule.value, weekKey.value)?.total ?? null
 }
 
-watch(
-  () => props.open,
-  (open) => open && reset(),
-  { immediate: true },
-)
-
 const dialogEl = ref<HTMLDialogElement | null>(null)
 
 // Restored to whatever it was before locking, rather than assumed to be '',
@@ -67,7 +61,9 @@ let previousBodyOverflow = ''
 // instead of a `v-if` in the template. `flush: 'post'` (with `immediate`) is
 // what makes this safe to run on mount: it defers the callback until after the
 // initial render, the same point `onMounted` would fire, so `dialogEl.value`
-// is guaranteed to exist even when a first run opens the dialog immediately.
+// is guaranteed to exist even when a first run opens the dialog immediately —
+// and since Vue resolves cascading updates within a flush before the browser
+// paints, deferring `reset()` here too doesn't risk a flash of stale fields.
 //
 // showModal() gives focus containment and an inert, top-layer background for
 // free, but — confirmed by hand, not assumed — it does *not* stop the page
@@ -77,6 +73,7 @@ watch(
   () => props.open,
   (open) => {
     if (open) {
+      reset()
       dialogEl.value?.showModal()
       previousBodyOverflow = document.body.style.overflow
       document.body.style.overflow = 'hidden'
@@ -88,29 +85,23 @@ watch(
   { immediate: true, flush: 'post' },
 )
 
-// If this component is ever unmounted while open — this repo doesn't do that
-// today, but a leaked `overflow: hidden` on <body> would otherwise outlive
-// the dialog it belongs to — put the page's scroll back the way it was.
-onUnmounted(() => {
-  document.body.style.overflow = previousBodyOverflow
-})
-
 /**
  * `::backdrop` isn't a real element, so a click "on the backdrop" is a click
  * that lands directly on the dialog itself rather than on any of its content —
  * but that's also true of a click in the dialog's own padding, which target
- * equality alone can't tell apart from one. Comparing against the rendered box
- * catches only clicks that actually fall outside it.
+ * equality alone can't tell apart from one. `offsetX`/`offsetY` are relative
+ * to the dialog's own padding box regardless of its internal scroll position,
+ * so comparing them against its content dimensions catches only clicks that
+ * actually fall outside that box — the true backdrop.
  */
 function onDialogClick(event: MouseEvent) {
   const dialog = dialogEl.value
   if (!dialog || event.target !== dialog) return
-  const rect = dialog.getBoundingClientRect()
   const inside =
-    event.clientX >= rect.left &&
-    event.clientX <= rect.right &&
-    event.clientY >= rect.top &&
-    event.clientY <= rect.bottom
+    event.offsetX >= 0 &&
+    event.offsetX <= dialog.clientWidth &&
+    event.offsetY >= 0 &&
+    event.offsetY <= dialog.clientHeight
   if (!inside) dismiss()
 }
 
