@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it } from 'vitest'
+import { DOMWrapper, mount, type VueWrapper } from '@vue/test-utils'
 import EntryCard from './EntryCard.vue'
 import type { Entry } from '../types'
 
@@ -24,13 +24,19 @@ function entry(overrides: Partial<Entry> = {}): Entry {
   }
 }
 
-describe('EntryCard', () => {
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
+// ConfirmDialog's `<dialog>` is teleported to the real `document.body`, so it
+// lands outside the mounted wrapper's own element tree.
+const body = () => new DOMWrapper(document.body)
 
+let wrapper: VueWrapper | undefined
+afterEach(() => {
+  wrapper?.unmount()
+  wrapper = undefined
+})
+
+describe('EntryCard', () => {
   it('shows the activity and summary line without expanding', () => {
-    const wrapper = mount(EntryCard, {
+    wrapper = mount(EntryCard, {
       props: { entry: entry({ employer: 'Acme Robotics', siteAppliedOn: 'LinkedIn' }) },
     })
     expect(wrapper.text()).toContain('Applied online for a job')
@@ -39,13 +45,13 @@ describe('EntryCard', () => {
   })
 
   it('offers no Details button for an entry with nothing else recorded', () => {
-    const wrapper = mount(EntryCard, { props: { entry: entry() } })
+    wrapper = mount(EntryCard, { props: { entry: entry() } })
     expect(wrapper.find('.text-link').exists()).toBe(false)
     expect(wrapper.find('.details').exists()).toBe(false)
   })
 
   it('toggles the detail fields, labelling each one', async () => {
-    const wrapper = mount(EntryCard, {
+    wrapper = mount(EntryCard, {
       props: {
         entry: entry({
           jobType: 'Frontend Developer',
@@ -80,28 +86,30 @@ describe('EntryCard', () => {
 
   it('emits edit with the whole entry', async () => {
     const subject = entry({ employer: 'TechNova Systems' })
-    const wrapper = mount(EntryCard, { props: { entry: subject } })
+    wrapper = mount(EntryCard, { props: { entry: subject } })
     await wrapper.get('[title="Edit"]').trigger('click')
     expect(wrapper.emitted('edit')?.[0]).toEqual([subject])
   })
 
-  it('names the entry in the delete confirmation and emits only on confirm', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    const wrapper = mount(EntryCard, { props: { entry: entry({ employer: 'Acme Robotics' }) } })
+  describe('delete confirmation', () => {
+    it('names the entry in the confirmation and emits only when confirmed', async () => {
+      wrapper = mount(EntryCard, { props: { entry: entry({ employer: 'Acme Robotics' }) } })
 
-    await wrapper.get('[title="Delete"]').trigger('click')
-    expect(confirmSpy.mock.calls[0][0]).toContain('Acme Robotics')
-    expect(wrapper.emitted('remove')).toBeUndefined()
+      await wrapper.get('[title="Delete"]').trigger('click')
+      expect(body().get('dialog').text()).toContain('Acme Robotics')
 
-    confirmSpy.mockReturnValue(true)
-    await wrapper.get('[title="Delete"]').trigger('click')
-    expect(wrapper.emitted('remove')?.[0]).toEqual(['e1'])
-  })
+      await body().get('dialog button.ghost').trigger('click')
+      expect(wrapper.emitted('remove')).toBeUndefined()
 
-  it('falls back to "this activity" when there is no employer to name', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    const wrapper = mount(EntryCard, { props: { entry: entry() } })
-    await wrapper.get('[title="Delete"]').trigger('click')
-    expect(confirmSpy.mock.calls[0][0]).toContain('this activity')
+      await wrapper.get('[title="Delete"]').trigger('click')
+      await body().get('dialog button.danger').trigger('click')
+      expect(wrapper.emitted('remove')?.[0]).toEqual(['e1'])
+    })
+
+    it('falls back to "this activity" when there is no employer to name', async () => {
+      wrapper = mount(EntryCard, { props: { entry: entry() } })
+      await wrapper.get('[title="Delete"]').trigger('click')
+      expect(body().get('dialog').text()).toContain('this activity')
+    })
   })
 })
