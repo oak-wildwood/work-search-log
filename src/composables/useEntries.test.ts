@@ -45,7 +45,10 @@ describe('useEntries seeding', () => {
   })
 
   it('seeds in dev regardless of the flag', async () => {
+    // MODE too: under vitest it is 'test', which demoMode.ts excludes so that
+    // component tests aren't silently handed seeded data.
     vi.stubEnv('DEV', true)
+    vi.stubEnv('MODE', 'development')
     const { entries, isDemoData } = await loadEntries()
     expect(isDemoData).toBe(true)
     expect(entries.value.length).toBeGreaterThan(0)
