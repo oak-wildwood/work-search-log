@@ -33,16 +33,21 @@ const summary = computed(() => {
       <span class="eyebrow">{{ config.agencyName }}</span>
     </div>
     <div class="header-controls no-print">
-      <span v-if="settings.name" class="claimant">{{ settings.name }}</span>
-      <button
-        class="prefs-btn"
-        type="button"
-        title="Preferences"
-        @click="$emit('open-preferences')"
-      >
-        <span class="prefs-gear" aria-hidden="true">⚙</span>
-        <span class="prefs-summary">{{ summary }}</span>
-      </button>
+      <div class="identity">
+        <template v-if="settings.name">
+          <span class="claimant">{{ settings.name }}</span>
+          <span class="sep" aria-hidden="true">·</span>
+        </template>
+        <button
+          class="prefs-btn"
+          type="button"
+          title="Preferences"
+          @click="$emit('open-preferences')"
+        >
+          <span class="prefs-gear" aria-hidden="true">⚙</span>
+          <span class="prefs-summary">{{ summary }}</span>
+        </button>
+      </div>
       <button
         class="theme-toggle"
         :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -94,10 +99,19 @@ h1 {
      falls back to the left edge — this keeps it pinned to the right instead. */
   margin-left: auto;
 }
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .claimant {
   font-size: 14px;
   font-weight: 600;
   color: var(--ink);
+}
+.sep {
+  color: var(--muted);
+  font-size: 13px;
 }
 .prefs-btn {
   display: flex;
@@ -137,6 +151,65 @@ h1 {
 }
 .theme-toggle:hover {
   border-color: var(--brass);
+}
+
+@media (max-width: 480px) {
+  /* Below this width the desktop single-row layout no longer fits, so the
+     header becomes a 2-row grid: the title alone on row one, and the agency
+     name paired with the identity/settings cluster on row two. `title-row`
+     is unwrapped via `display: contents` so its children (h1, .eyebrow) can
+     be placed independently rather than travelling together. */
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 'title title' 'eyebrow controls';
+    gap: 8px 12px;
+  }
+  .title-row {
+    display: contents;
+  }
+  h1 {
+    grid-area: title;
+  }
+  .eyebrow {
+    grid-area: eyebrow;
+    align-self: center;
+    /* The identity chip is the actionable control and always keeps its full
+       width; the agency label is decorative context, so it's what gives way
+       first — truncating cleanly reads better than wrapping into a stack of
+       single words. */
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .header-controls {
+    grid-area: controls;
+    margin-left: 0;
+    flex-shrink: 0;
+  }
+  /* The claimant's name and the settings summary are two views of the same
+     thing — whose log, under what rules — so on the narrow layout they read
+     as one chip instead of two adjacent controls. */
+  .identity {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 6px 10px;
+    gap: 5px;
+    background: var(--card);
+    white-space: nowrap;
+  }
+  .prefs-btn {
+    border: none;
+    background: none;
+    padding: 0;
+  }
+  .claimant {
+    font-size: 13px;
+  }
+  .prefs-gear {
+    font-size: 16px;
+  }
 }
 
 @media print {
