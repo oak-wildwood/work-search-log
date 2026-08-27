@@ -19,7 +19,8 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
-      # write, not read: the agent pushes a branch and opens a pull request.
+      # write, not read: the agent pushes a branch, and the step below opens a
+      # pull request for it.
       contents: write
       pull-requests: write
       issues: write
@@ -41,8 +42,60 @@ jobs:
           additional_permissions: |
             actions: read
 
-          # npm/npx so the agent can run the suite on its own work; gh pr
-          # create because the action otherwise only leaves a "Create PR" link.
+          # npm/npx so the agent can run the suite on its own work; gh pr view
+          # so it can read PR state. Opening the pull request is the next step's
+          # job, not the agent's — see the comment there.
           # It still cannot edit .github/workflows/ — that's a token limit.
           claude_args: >-
-            --allowedTools "Bash(npm:*),Bash(npx:*),Bash(gh pr create:*),Bash(gh pr view:*)"
+            --allowedTools "Bash(npm:*),Bash(npx:*),Bash(gh pr view:*)"
+
+      # The action injects its own instruction sheet ahead of the issue text, and
+      # it ends the "straightforward changes" path with "provide a URL to create
+      # a PR manually". That fires on every run, so neither a comment saying
+      # "open a PR" nor AGENTS.md saying the same reliably beats it — the agent
+      # pushes a branch and leaves a link. Opening the pull request here sidesteps
+      # the argument entirely.
+      - name: Open a pull request for the pushed branch
+        if: steps.claude.outputs.branch_name != '' && steps.claude.outputs.conclusion == 'success'
+        env:
+          # The Claude App token, deliberately, not the default GITHUB_TOKEN: a
+          # pull request opened with GITHUB_TOKEN does not trigger `on:
+          # pull_request`, which would leave ci.yml and the Vercel preview dead
+          # on every agent-authored PR.
+          GH_TOKEN: ${{ steps.claude.outputs.github_token }}
+          BRANCH: ${{ steps.claude.outputs.branch_name }}
+          BASE: ${{ github.event.repository.default_branch }}
+          ISSUE: ${{ github.event.issue.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          # Compared through the API rather than with git: the checkout above is
+          # shallow, so there is no merge base locally to count commits against.
+          compare=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$BRANCH")
+
+          if [ "$(jq -r '.ahead_by' <<<"$compare")" -eq 0 ]; then
+            echo "$BRANCH has no commits on top of $BASE — nothing to open."
+            exit 0
+          fi
+
+          # Also covers the PR-triggered case, where the agent pushes to a branch
+          # that already has its own pull request open.
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            echo "A pull request for $BRANCH is already open."
+            exit 0
+          fi
+
+          # The title becomes the squashed commit subject, so it comes from the
+          # branch's own first commit rather than being generated here. AGENTS.md
+          # tells the agent to write those as conventional commits; if one slips
+          # through, pr-title.yml fails visibly on the new PR and the title can be
+          # fixed by hand — better than opening no pull request at all.
+          title=$(jq -r '.commits[0].commit.message' <<<"$compare" | head -1)
+
+          body="Opened automatically from [this run]($RUN_URL) after the agent pushed \`$BRANCH\`."
+          if [ -n "$ISSUE" ]; then
+            body="$body"$'\n\n'"Closes #$ISSUE"
+          fi
+
+          gh pr create --base "$BASE" --head "$BRANCH" --title "$title" --body "$body"
