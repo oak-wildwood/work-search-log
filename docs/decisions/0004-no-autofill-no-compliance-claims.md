@@ -20,14 +20,23 @@ Two hard rules, enforced in code and in review, not just in prose:
 - **Never generate, suggest, or autofill an activity entry.** Not demo content, not a
   placeholder, not an autocomplete suggestion drawn from prior entries. Prefilling the claimant's
   own profile data (their name) is fine; inventing a plausible employer, date, or activity is not,
-  under any framing. The one seeded fixture (`src/lib/seedEntries.ts`) is fenced behind
-  `import.meta.env.DEV` or an explicit `VITE_DEMO_DATA=1` opt-in (compared against the literal
-  string `'1'`, since Vite inlines env vars as strings and `'0'`/`'false'` are both truthy). That
-  flag is set by hand, scoped to Vercel's Preview environment only, so a PR preview shows reviewers
-  a populated log; it is never set for the GitHub Pages build a claimant actually uses, so that
-  build still starts empty. Whenever seeding is active — including `npm run dev` — `App.vue` shows
-  a `no-print` banner stating plainly that the entries are sample data and not a real record, so
-  nobody handed a preview link has to guess which they're looking at.
+  under any framing. The one seeded fixture (`src/lib/seedEntries.ts`) holds sample entries and the
+  demo profile they belong to — `Test User`, `TX`, a weekly requirement of 3 — both fenced behind
+  the single flag in `src/lib/demoMode.ts`: `import.meta.env.DEV` or an explicit `VITE_DEMO_DATA=1`
+  opt-in (compared against the literal string `'1'`, since Vite inlines env vars as strings and
+  `'0'`/`'false'` are both truthy). That flag is set by hand, scoped to Vercel's Preview environment
+  only, so a PR preview shows reviewers a populated log; it is never set for the GitHub Pages build
+  a claimant actually uses, so that build still starts empty. Whenever it is on — including
+  `npm run dev` — `App.vue` shows a `no-print` banner stating plainly that the data is a sample and
+  not a real record, so nobody handed a preview link has to guess which they're looking at. Demo
+  builds namespace their storage keys with a `:demo` suffix, so a demo and a real log can coexist in
+  one browser without either touching the other.
+
+  The fixture's weekly requirement of 3 is the only weekly number written down anywhere in this
+  repo, and it is fixture data, not a claim about Texas: `tx.json` deliberately carries none,
+  because TWC sets the count by county. It stays inside the fixture. `blankSettings()` and every
+  state config still presume nothing, so a claimant is never shown a number the app invented.
+
 - **Never assert compliance.** Copy reports what was logged ("3 of 4 logged"), never a judgment
   ("you've met your requirement", "you're compliant this week"). This is why every scoring badge
   and cap warning in `WeekGroup.vue` carries the `no-print` class: the printed sheet is what an

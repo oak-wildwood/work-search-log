@@ -1,8 +1,12 @@
 import { computed, ref, watch } from 'vue'
 import { readJSON, writeJSON } from '../lib/storage'
+import { createSeedSettings } from '../lib/seedEntries'
+import { DEMO_DATA_ENABLED, STORAGE_SUFFIX } from '../lib/demoMode'
 import type { ExemptPeriod, RequirementEntry, RequirementSchedule } from '../config/types'
 
-const STORAGE_KEY = 'work-search-log:settings:v2'
+const STORAGE_KEY = `work-search-log:settings:v2${STORAGE_SUFFIX}`
+// Unsuffixed: a demo build returns its fixture before ever reaching the
+// migration, so there is no demo-scoped legacy profile to read.
 const LEGACY_KEY = 'work-search-log:settings:v1'
 
 export interface Settings {
@@ -55,6 +59,11 @@ function loadSettings(): Settings {
       onboardedAt: typeof stored.onboardedAt === 'string' ? stored.onboardedAt : null,
     }
   }
+  // Below the `stored` branch on purpose: a real profile always wins, so a demo
+  // build never overwrites settings someone has already entered. The seeded
+  // requirement lives in the fixture, not in blankSettings() — outside this
+  // flag the app still presumes no weekly number at all.
+  if (DEMO_DATA_ENABLED) return { ...blankSettings(), ...createSeedSettings() }
   return migrateLegacy() ?? blankSettings()
 }
 

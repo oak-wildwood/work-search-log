@@ -1,4 +1,5 @@
 import type { Entry } from '../types'
+import type { RequirementEntry } from '../config/types'
 import { toLocalISODate } from './weeks'
 
 function daysAgo(n: number): string {
@@ -28,9 +29,10 @@ function draft(fields: RequiredFields & Partial<SeedDraft>): SeedDraft {
 }
 
 /**
- * Sample entries for local dev only (see useEntries.ts) — otherwise there's no
- * way to see week grouping, requirement scoring, or search actually working
- * without logging a pile of entries by hand every time storage is cleared.
+ * Sample entries for demo builds only (see useEntries.ts and demoMode.ts) —
+ * otherwise there's no way to see week grouping, requirement scoring, or search
+ * actually working without logging a pile of entries by hand every time storage
+ * is cleared.
  * Dates are relative to today so the spread across weeks stays realistic no
  * matter when `npm run dev` is started. A few names (Acme Robotics, Frontend
  * Developer) repeat on purpose across different weeks so search navigation
@@ -136,4 +138,34 @@ export function createSeedEntries(): Entry[] {
     createdAt: now,
     updatedAt: now,
   }))
+}
+
+/**
+ * The profile those entries belong to, seeded under the same flag (see
+ * useSettings.ts). Without it a demo build opens on the empty setup dialog with
+ * no state and no requirement, so the seeded weeks score against nothing and a
+ * reviewer has to fill in three fields before seeing the app at all.
+ *
+ * The weekly count here is fixture data in the same category as the employers
+ * above, not a claim about Texas: `tx.json` deliberately carries no number,
+ * because TWC sets the count by county. Nothing outside this flag gains a
+ * default — `blankSettings()` still returns none.
+ */
+export function createSeedSettings(): {
+  name: string
+  stateCode: string
+  requirements: RequirementEntry[]
+  onboardedAt: string
+} {
+  return {
+    name: 'Test User',
+    stateCode: 'TX',
+    // Epoch-dated so it covers every week the entries above span, matching how
+    // migrateLegacy() dates a pre-schedule requirement. Dating it today would
+    // leave all but the current week scoring against no requirement at all.
+    requirements: [{ effective: '1970-01-01', total: 3, minEmployerContacts: null }],
+    // Set so the setup dialog is skipped and a preview opens on the populated
+    // app rather than a modal. Still reachable from Preferences.
+    onboardedAt: new Date().toISOString(),
+  }
 }

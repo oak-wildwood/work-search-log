@@ -2,23 +2,18 @@ import { ref } from 'vue'
 import type { Entry, EntryDraft } from '../types'
 import { readJSON, writeJSON } from '../lib/storage'
 import { createSeedEntries } from '../lib/seedEntries'
+import { DEMO_DATA_ENABLED, STORAGE_SUFFIX } from '../lib/demoMode'
 
-const STORAGE_KEY = 'work-search-log:entries:v1'
+const STORAGE_KEY = `work-search-log:entries:v1${STORAGE_SUFFIX}`
 
 function makeId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
 const storedEntries = readJSON<Entry[] | null>(STORAGE_KEY, null)
-// Dev server or an explicit opt-in flag, and only on first run — clearing
-// storage or clicking "Clear all" doesn't bring it back. The flag is never
-// set for the GitHub Pages build, only (by hand, in the dashboard) for Vercel
-// preview deploys, so a claimant using the real app never sees it. Vite
-// inlines env vars as strings, so this compares against the literal '1'
-// rather than truthiness — '0' and 'false' are both non-empty strings and
-// would otherwise turn seeding on when they plainly mean off.
-const seeded =
-  storedEntries === null && (import.meta.env.DEV || import.meta.env.VITE_DEMO_DATA === '1')
+// Only on first run — clearing storage or clicking "Clear all" doesn't bring
+// the sample entries back. See demoMode.ts for when seeding is allowed at all.
+const seeded = storedEntries === null && DEMO_DATA_ENABLED
 
 // Module-level state: every component calling useEntries() shares one store,
 // with no need for provide/inject or a state-management library.
