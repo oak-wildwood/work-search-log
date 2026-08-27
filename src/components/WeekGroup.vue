@@ -92,8 +92,9 @@ watch(
 .week-head {
   width: 100%;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px 8px;
   border: none;
   border-bottom: 1px solid var(--line);
   background: none;
@@ -113,6 +114,7 @@ watch(
   font-weight: 600;
   font-size: 16px;
   color: var(--green-deep);
+  white-space: nowrap;
 }
 .week-meta {
   margin-left: auto;
@@ -123,6 +125,7 @@ watch(
 .week-activity-count {
   font-size: 13px;
   color: var(--muted);
+  white-space: nowrap;
 }
 .week-count {
   font-size: 13px;
