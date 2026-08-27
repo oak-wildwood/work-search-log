@@ -89,6 +89,10 @@ h1 {
   display: flex;
   align-items: center;
   gap: 14px;
+  /* When this wraps to its own line under the title on narrow screens,
+     `space-between` on `header` has nothing left to space it against and it
+     falls back to the left edge — this keeps it pinned to the right instead. */
+  margin-left: auto;
 }
 .claimant {
   font-size: 14px;
