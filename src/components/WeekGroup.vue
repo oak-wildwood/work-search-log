@@ -132,6 +132,7 @@ watch(
   padding: 3px 8px;
   border-radius: 10px;
   border: 1px solid var(--line);
+  white-space: nowrap;
 }
 .week-count.ok {
   color: var(--ok);
@@ -154,6 +155,24 @@ watch(
 }
 .week-note.warn {
   color: var(--warn);
+}
+@media (max-width: 480px) {
+  .week-title {
+    font-size: 15px;
+  }
+  .week-meta {
+    /* Forces its own row below the caret/title instead of depending on the
+       browser's line-fitting math, which was letting the pill and the count
+       text wrap internally on narrow screens instead of the cluster as a
+       whole moving down. */
+    flex-basis: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+  .week-activity-count,
+  .week-count {
+    font-size: 12px;
+  }
 }
 @media print {
   .week-head {
