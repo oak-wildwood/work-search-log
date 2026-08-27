@@ -35,6 +35,18 @@ export function formatISODate(dateStr: string): string {
 }
 
 /**
+ * A week's span written compactly for space-constrained UI (the collapsible
+ * history list): "Aug 16–22, 2026" within a month, falling back to spelling
+ * out both ends across a month or year boundary.
+ */
+export function formatWeekRange(start: Date, end: Date): string {
+  const sameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()
+  if (!sameMonth) return `${formatDate(start)} – ${formatDate(end)}`
+  const month = start.toLocaleDateString('en-US', { month: 'short' })
+  return `${month} ${start.getDate()}–${end.getDate()}, ${start.getFullYear()}`
+}
+
+/**
  * Start of the week containing this yyyy-mm-dd date string. `weekStartDay` is
  * 0 = Sunday, which is what most states use.
  */

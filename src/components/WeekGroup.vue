@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { WeekGroup } from '../lib/weeks'
 import { outcomeClass, type WeekStatus } from '../lib/requirements'
-import { formatDate } from '../lib/weeks'
+import { formatWeekRange } from '../lib/weeks'
 import type { Entry } from '../types'
 import { useSearch } from '../composables/useSearch'
 import EntryCard from './EntryCard.vue'
@@ -48,7 +48,7 @@ watch(
   <div class="week-block">
     <button class="week-head" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
       <span class="caret">{{ expanded ? '▾' : '▸' }}</span>
-      <span class="week-title">{{ formatDate(group.start) }} – {{ formatDate(group.end) }}</span>
+      <span class="week-title">{{ formatWeekRange(group.start, group.end) }}</span>
       <span class="week-meta">
         <span class="week-activity-count">
           {{ group.entries.length }} {{ group.entries.length === 1 ? 'activity' : 'activities' }}
@@ -161,13 +161,12 @@ watch(
     font-size: 15px;
   }
   .week-meta {
-    /* Forces its own row below the caret/title instead of depending on the
-       browser's line-fitting math, which was letting the pill and the count
-       text wrap internally on narrow screens instead of the cluster as a
-       whole moving down. */
-    flex-basis: 100%;
-    margin-left: 0;
-    justify-content: flex-end;
+    /* The shorter week-range format usually leaves enough room for this to
+       share the first line; `nowrap` above on the title and count text is
+       what actually prevents the internal splitting bug this used to force
+       a second row to avoid, so it's safe to let it share the line when
+       there's space and drop to its own line (as one unit) when there isn't. */
+    margin-left: auto;
   }
   .week-activity-count,
   .week-count {

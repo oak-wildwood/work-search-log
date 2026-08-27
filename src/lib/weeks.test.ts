@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupByWeek, weekStartDate } from './weeks'
+import { formatWeekRange, groupByWeek, parseLocalISO, weekStartDate } from './weeks'
 import type { Entry } from '../types'
 
 function makeEntry(date: string, id = date): Entry {
@@ -20,6 +20,23 @@ function makeEntry(date: string, id = date): Entry {
     updatedAt: date,
   }
 }
+
+describe('formatWeekRange', () => {
+  it('condenses a range within the same month', () => {
+    const range = formatWeekRange(parseLocalISO('2026-08-16'), parseLocalISO('2026-08-22'))
+    expect(range).toBe('Aug 16–22, 2026')
+  })
+
+  it('spells out both ends across a month boundary', () => {
+    const range = formatWeekRange(parseLocalISO('2026-08-30'), parseLocalISO('2026-09-05'))
+    expect(range).toBe('Aug 30, 2026 – Sep 5, 2026')
+  })
+
+  it('spells out both ends across a year boundary', () => {
+    const range = formatWeekRange(parseLocalISO('2026-12-28'), parseLocalISO('2027-01-03'))
+    expect(range).toBe('Dec 28, 2026 – Jan 3, 2027')
+  })
+})
 
 describe('weekStartDate', () => {
   it('returns the same date when given a Sunday', () => {
