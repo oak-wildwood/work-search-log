@@ -17,7 +17,7 @@ import { DEMO_DATA_ENABLED } from '../lib/demoMode'
   background: var(--warn);
   color: var(--paper);
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   padding: 8px 12px;
   margin: 0;

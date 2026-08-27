@@ -31,9 +31,9 @@ const summary = computed(() => {
       <!-- The agency name comes from the selected state, which is what used to
            require a separate branch per state. -->
       <span class="eyebrow">{{ config.agencyName }}</span>
-      <span v-if="settings.name" class="claimant">{{ settings.name }}</span>
     </div>
     <div class="header-controls no-print">
+      <span v-if="settings.name" class="claimant">{{ settings.name }}</span>
       <button
         class="prefs-btn"
         type="button"
@@ -80,7 +80,7 @@ h1 {
   letter-spacing: -0.01em;
 }
 .eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--brass);
@@ -91,16 +91,17 @@ h1 {
   gap: 14px;
 }
 .claimant {
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
 }
 .prefs-btn {
   display: flex;
   align-items: center;
   gap: 7px;
   font: inherit;
-  font-size: 12px;
-  padding: 5px 10px;
+  font-size: 13px;
+  padding: 7px 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
@@ -111,7 +112,7 @@ h1 {
   border-color: var(--brass);
 }
 .prefs-gear {
-  font-size: 13px;
+  font-size: 20px;
   line-height: 1;
 }
 .prefs-summary {
@@ -119,15 +120,15 @@ h1 {
   color: var(--ink);
 }
 .theme-toggle {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--card);
   color: var(--brass);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1;
 }
 .theme-toggle:hover {

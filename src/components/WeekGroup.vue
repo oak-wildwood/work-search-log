@@ -105,7 +105,7 @@ watch(
 }
 .caret {
   color: var(--brass);
-  font-size: 11px;
+  font-size: 18px;
   flex: 0 0 auto;
 }
 .week-title {
@@ -121,11 +121,11 @@ watch(
   gap: 10px;
 }
 .week-activity-count {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .week-count {
-  font-size: 12px;
+  font-size: 13px;
   padding: 3px 8px;
   border-radius: 10px;
   border: 1px solid var(--line);
@@ -144,7 +144,7 @@ watch(
   color: var(--muted);
 }
 .week-note {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin: -4px 0 8px;
   line-height: 1.5;

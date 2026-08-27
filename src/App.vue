@@ -299,7 +299,7 @@ main {
   color: var(--warn);
   border-radius: 4px;
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 16px;
 }
 .notice {
@@ -307,7 +307,7 @@ main {
   border-left: 3px solid var(--brass);
   border-radius: 4px;
   padding: 9px 12px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
   margin: 0 0 12px;
@@ -316,7 +316,7 @@ main {
   border: none;
   border-left: none;
   padding: 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 .notice a {
   color: var(--brass);
@@ -334,7 +334,7 @@ main {
   margin-bottom: 8px;
 }
 .eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--brass);
@@ -375,7 +375,7 @@ main {
   color: var(--muted);
 }
 .exempt-badge {
-  font-size: 12px;
+  font-size: 13px;
   padding: 3px 8px;
   border-radius: 10px;
   border: 1px solid var(--brass);
@@ -398,7 +398,7 @@ main {
   opacity: 1;
 }
 .caption {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .caption.sub {
@@ -417,7 +417,7 @@ main {
   margin: 8px 0 14px;
 }
 .history-label {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--brass);
@@ -428,7 +428,7 @@ main {
   gap: 10px;
 }
 .history-total {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .print-btn {

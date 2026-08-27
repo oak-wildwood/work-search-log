@@ -129,7 +129,7 @@ function handleRemove(entry: Entry) {
   border-radius: 4px;
   padding: 10px 12px;
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   /* Notes and results are free text and sometimes a pasted URL — without
      this, one unbroken long word forces the flex rows below wider than the
@@ -160,11 +160,11 @@ function handleRemove(entry: Entry) {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   flex: 0 0 auto;
 }
 .summary {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: 2px;
 }
@@ -183,7 +183,7 @@ function handleRemove(entry: Entry) {
 .label {
   color: var(--brass);
   font-weight: 600;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   min-width: 78px;
@@ -193,7 +193,7 @@ function handleRemove(entry: Entry) {
   border: none;
   color: var(--brass);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
   text-decoration: underline;
   padding: 4px 4px;
@@ -204,10 +204,10 @@ function handleRemove(entry: Entry) {
   border: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 21px;
   line-height: 1;
-  padding: 4px 6px;
-  border-radius: 3px;
+  padding: 8px;
+  border-radius: 4px;
 }
 .icon-btn:hover {
   color: var(--warn);
