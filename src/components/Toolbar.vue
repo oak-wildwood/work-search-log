@@ -4,6 +4,7 @@ import type { Entry } from '../types'
 import { toCsv } from '../lib/csv'
 import { parseBackupJson, toBackupJson } from '../lib/backup'
 import { useStateConfig } from '../composables/useStateConfig'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 const props = defineProps<{
   entries: Entry[]
@@ -16,6 +17,12 @@ const emit = defineEmits<{
 
 const fileInput = ref<HTMLInputElement>()
 const importMessage = ref('')
+
+const replaceDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null)
+const clearAllDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null)
+// Only known once a file is picked, so the dialog's body — which names both
+// counts — has something to read by the time `replaceDialog.value.open()` runs.
+const importCount = ref(0)
 
 // Retention and the agency's name both vary by state, so the footer sentence is
 // assembled from the config rather than asserted in the markup. `agencyShort`
@@ -52,25 +59,19 @@ async function handleFileChange(e: Event) {
   const parsed = parseBackupJson(text)
   if (!parsed) {
     importMessage.value = 'Could not read that file — is it a Work Search Log JSON backup?'
-  } else if (
-    props.entries.length === 0 ||
-    confirm(
-      `This replaces your current ${props.entries.length} logged ${props.entries.length === 1 ? 'entry' : 'entries'} with the ${parsed.length} from this backup. Continue?`,
-    )
-  ) {
-    emit('import', parsed)
-    importMessage.value = `Imported ${parsed.length} ${parsed.length === 1 ? 'entry' : 'entries'}.`
+  } else {
+    importCount.value = parsed.length
+    if (props.entries.length === 0 || (await replaceDialog.value?.open())) {
+      emit('import', parsed)
+      importMessage.value = `Imported ${parsed.length} ${parsed.length === 1 ? 'entry' : 'entries'}.`
+    }
   }
   ;(e.target as HTMLInputElement).value = ''
   setTimeout(() => (importMessage.value = ''), 3000)
 }
 
-function handleClearAll() {
-  if (
-    confirm(
-      'Delete every logged activity? This cannot be undone — export a backup first if unsure.',
-    )
-  ) {
+async function handleClearAll() {
+  if (await clearAllDialog.value?.open()) {
     emit('clear-all')
   }
 }
@@ -101,6 +102,16 @@ function handleClearAll() {
     />
     <p class="status" role="status" aria-live="polite">{{ importMessage }}</p>
   </footer>
+
+  <ConfirmDialog ref="replaceDialog" confirm-label="Replace" danger>
+    This replaces your current {{ entries.length }} logged
+    {{ entries.length === 1 ? 'entry' : 'entries' }} with the {{ importCount }} from this backup.
+    Continue?
+  </ConfirmDialog>
+
+  <ConfirmDialog ref="clearAllDialog" confirm-label="Delete all" danger>
+    Delete every logged activity? This cannot be undone — export a backup first if unsure.
+  </ConfirmDialog>
 </template>
 
 <style scoped>

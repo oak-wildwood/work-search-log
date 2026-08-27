@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { formatISODate } from '../lib/weeks'
 import type { Entry } from '../types'
 import { useSearch } from '../composables/useSearch'
+import ConfirmDialog from './ConfirmDialog.vue'
 import HighlightText from './HighlightText.vue'
 
 const props = defineProps<{
@@ -43,12 +44,10 @@ function toggleDetails() {
   showDetails.value = !showDetails.value
 }
 
-function handleRemove(entry: Entry) {
-  if (
-    confirm(
-      `Delete the ${formatISODate(entry.date)} entry for ${entry.employer || 'this activity'}?`,
-    )
-  ) {
+const removeDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null)
+
+async function handleRemove(entry: Entry) {
+  if (await removeDialog.value?.open()) {
     emit('remove', entry.id)
   }
 }
@@ -119,6 +118,10 @@ function handleRemove(entry: Entry) {
       </div>
     </div>
   </div>
+
+  <ConfirmDialog ref="removeDialog" confirm-label="Delete" danger>
+    Delete the {{ formatISODate(entry.date) }} entry for {{ entry.employer || 'this activity' }}?
+  </ConfirmDialog>
 </template>
 
 <style scoped>
