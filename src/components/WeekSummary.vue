@@ -146,15 +146,6 @@ const thisWeekSegments = computed(() => {
 .caption.short {
   color: var(--warn);
 }
-.link-inline {
-  font: inherit;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--brass);
-  text-decoration: underline;
-  cursor: pointer;
-}
 
 @media print {
   /* The on-screen "This week" summary is replaced by the cover block, which says

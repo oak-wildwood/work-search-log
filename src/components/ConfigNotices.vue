@@ -74,13 +74,4 @@ defineEmits<{ 'open-preferences': [] }>()
 .notice a {
   color: var(--brass);
 }
-.link-inline {
-  font: inherit;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--brass);
-  text-decoration: underline;
-  cursor: pointer;
-}
 </style>

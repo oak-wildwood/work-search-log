@@ -1,26 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ConfigNotices from './ConfigNotices.vue'
-import type { StateConfig } from '../config/types'
+import { makeTestStateConfig } from '../config/testFixtures'
 
-const config: StateConfig = {
-  code: 'TEST',
-  agencyName: 'Test Agency',
-  agencyShort: 'TA',
-  weekStartDay: 0,
-  requirementSource: 'letter',
-  jurisdictionLabel: 'County',
-  claimIdLabel: 'Claim number',
-  hasOnlineLogging: false,
-  activityTypes: [],
-  contactMethods: [],
-  resultOptions: [],
-  siteOptions: [],
-  requiredFields: [],
-  duplicateEmployerCounts: true,
-  retention: 'benefit_year',
-  lastVerified: null,
-}
+const config = makeTestStateConfig()
 
 describe('ConfigNotices', () => {
   it('warns when local storage is blocked', () => {

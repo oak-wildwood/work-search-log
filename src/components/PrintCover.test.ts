@@ -2,27 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import PrintCover from './PrintCover.vue'
 import type { Settings } from '../composables/useSettings'
-import type { StateConfig } from '../config/types'
+import { makeTestStateConfig } from '../config/testFixtures'
 import type { Entry } from '../types'
 
-const config: StateConfig = {
-  code: 'TEST',
-  agencyName: 'Test Agency',
-  agencyShort: 'TA',
-  weekStartDay: 0,
-  requirementSource: 'letter',
-  jurisdictionLabel: 'County',
-  claimIdLabel: 'Claim number',
-  hasOnlineLogging: false,
-  activityTypes: [],
-  contactMethods: [],
-  resultOptions: [],
-  siteOptions: [],
-  requiredFields: [],
-  duplicateEmployerCounts: true,
-  retention: 'benefit_year',
-  lastVerified: null,
-}
+const config = makeTestStateConfig()
 
 const settings: Settings = {
   name: '',
