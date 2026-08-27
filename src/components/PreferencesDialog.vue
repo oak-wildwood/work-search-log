@@ -50,11 +50,73 @@ function reset() {
   enteredCount.value = resolveRequirement(schedule.value, weekKey.value)?.total ?? null
 }
 
+const dialogEl = ref<HTMLDialogElement | null>(null)
+
+// Restored to whatever it was before locking, rather than assumed to be '',
+// so this doesn't clobber an overflow style some other part of the app set.
+let previousBodyOverflow = ''
+
+// `<dialog>`'s own open/closed state is imperative — showModal()/close() rather
+// than an attribute Vue can bind — so it has to be driven from the prop here
+// instead of a `v-if` in the template. `flush: 'post'` (with `immediate`) is
+// what makes this safe to run on mount: it defers the callback until after the
+// initial render, the same point `onMounted` would fire, so `dialogEl.value`
+// is guaranteed to exist even when a first run opens the dialog immediately —
+// and since Vue resolves cascading updates within a flush before the browser
+// paints, deferring `reset()` here too doesn't risk a flash of stale fields.
+//
+// showModal() gives focus containment and an inert, top-layer background for
+// free, but — confirmed by hand, not assumed — it does *not* stop the page
+// behind the ::backdrop from scrolling under wheel/touch input. That still
+// has to be locked explicitly.
 watch(
   () => props.open,
-  (open) => open && reset(),
-  { immediate: true },
+  (open) => {
+    if (open) {
+      reset()
+      dialogEl.value?.showModal()
+      previousBodyOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+    } else {
+      dialogEl.value?.close()
+      document.body.style.overflow = previousBodyOverflow
+    }
+  },
+  { immediate: true, flush: 'post' },
 )
+
+/**
+ * `::backdrop` isn't a real element, so a click "on the backdrop" is a click
+ * that lands directly on the dialog itself rather than on any of its content —
+ * but that's also true of a click in the dialog's own padding, which target
+ * equality alone can't tell apart from one. `offsetX`/`offsetY` are relative
+ * to the dialog's own padding box regardless of its internal scroll position,
+ * so comparing them against its content dimensions catches only clicks that
+ * actually fall outside that box — the true backdrop.
+ */
+function onDialogClick(event: MouseEvent) {
+  const dialog = dialogEl.value
+  if (!dialog || event.target !== dialog) return
+  const inside =
+    event.offsetX >= 0 &&
+    event.offsetX <= dialog.clientWidth &&
+    event.offsetY >= 0 &&
+    event.offsetY <= dialog.clientHeight
+  if (!inside) dismiss()
+}
+
+/**
+ * The native `close` event fires for Escape and backdrop-driven cancellation
+ * as well as our own programmatic `close()` call below. Routing it through
+ * `dismiss()` is what makes Escape count as "seen" for onboarding purposes —
+ * but `dismiss()` itself triggers that same `close()` call via the watcher
+ * above, which would re-enter here a second time once the dialog is already
+ * closed. Checking `props.open` first — true only when the browser initiated
+ * this, not us — keeps `dismiss()` to a single call either way.
+ */
+function onNativeClose() {
+  if (props.open) dismiss()
+}
 
 const countHint = computed(() => {
   const config = draftConfig.value
@@ -87,19 +149,23 @@ function dismiss() {
 </script>
 
 <template>
-  <!-- The dialog's real semantics live on .panel below; this is just a
-       dimming/click-catching layer, not a control of its own — role
-       "presentation" says so, and Escape (which bubbles up from whichever
-       field inside .panel has focus) is the keyboard equivalent of the
-       click-to-dismiss it offers to mouse users. -->
-  <div
-    v-if="open"
-    class="backdrop no-print"
-    role="presentation"
-    @click.self="dismiss"
-    @keydown.esc="dismiss"
-  >
-    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="prefs-title">
+  <!-- No `v-if`: the element stays mounted so `dialogEl` is stable, and
+       `showModal()`/`close()` (driven from `open` above) are what actually
+       show and hide it. `no-print` has to live here rather than on a wrapper,
+       since Teleport moves this element outside `main` entirely. -->
+  <Teleport to="body">
+    <!-- `<dialog>` is already a native interactive/modal element with its own
+         keyboard handling (Escape) built in; the click handler below is only
+         the standard click-on-the-backdrop-to-dismiss pattern, not a fake
+         button standing in for one. -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <dialog
+      ref="dialogEl"
+      class="panel no-print"
+      aria-labelledby="prefs-title"
+      @click="onDialogClick"
+      @close="onNativeClose"
+    >
       <h2 id="prefs-title">{{ firstRun ? 'Set up your log' : 'Preferences' }}</h2>
       <p v-if="firstRun" class="lede">
         Three questions, then you're done. You can change any of it later.
@@ -163,31 +229,28 @@ function dismiss() {
           {{ firstRun ? 'Skip for now' : 'Cancel' }}
         </button>
       </div>
-    </div>
-  </div>
+    </dialog>
+  </Teleport>
 </template>
 
 <style scoped>
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  z-index: 50;
-}
 .panel {
+  color: inherit;
   background: var(--card);
   border: 1px solid var(--line);
   border-top: 3px double var(--brass);
   border-radius: 6px;
   padding: 22px;
-  width: 100%;
+  /* `width: 100%` of the fixed-position containing block set up by
+     `dialog:modal`'s UA-stylesheet `inset: 0` is the viewport, so this is
+     the same 20px gutter the old flex-centered backdrop gave for free. */
+  width: calc(100% - 40px);
   max-width: 420px;
   max-height: 90vh;
   overflow-y: auto;
+}
+.panel::backdrop {
+  background: rgba(0, 0, 0, 0.45);
 }
 h2 {
   font-family: var(--font-display);

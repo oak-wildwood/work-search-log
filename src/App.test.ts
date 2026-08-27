@@ -1,13 +1,24 @@
-import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it } from 'vitest'
+import { DOMWrapper, mount, type VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import App from './App.vue'
 import { useSettings } from './composables/useSettings'
 
+// PreferencesDialog's `<dialog>` is teleported to the real `document.body`
+// rather than into whatever detached element `mount` uses, so leaving it
+// mounted would leak an open dialog into every later test in this file.
+let wrapper: VueWrapper | undefined
+afterEach(() => {
+  wrapper?.unmount()
+  wrapper = undefined
+})
+
 describe('App', () => {
   it('starts with no weekly requirement rather than presuming one', () => {
-    const wrapper = mount(App)
-    const goal = wrapper.find('[data-testid="weekly-requirement"]')
+    wrapper = mount(App)
+    // The first-run PreferencesDialog is teleported to `document.body`, so it
+    // lands outside App's own element tree.
+    const goal = new DOMWrapper(document.body).find('[data-testid="weekly-requirement"]')
     expect((goal.element as HTMLInputElement).value).toBe('')
     expect(wrapper.text()).toContain('set your weekly requirement')
     expect(wrapper.text()).not.toContain('of 3 logged')
@@ -17,7 +28,7 @@ describe('App', () => {
     const { setStateCode } = useSettings()
 
     setStateCode(null)
-    const wrapper = mount(App)
+    wrapper = mount(App)
     await nextTick()
     const genericLabels = wrapper.findAll('#f-activity option').map((o) => o.text())
     expect(genericLabels).toContain('Applied online for a job')
@@ -46,7 +57,7 @@ describe('App', () => {
   it('warns when a state has no bundled config instead of failing', async () => {
     const { setStateCode } = useSettings()
     setStateCode('ZZ')
-    const wrapper = mount(App)
+    wrapper = mount(App)
     await nextTick()
     expect(wrapper.text()).toContain('No rules are bundled for that state yet')
     setStateCode(null)
