@@ -2,17 +2,18 @@ import { ref } from 'vue'
 import type { Entry, EntryDraft } from '../types'
 import { readJSON, writeJSON } from '../lib/storage'
 import { createSeedEntries } from '../lib/seedEntries'
+import { DEMO_DATA_ENABLED, STORAGE_SUFFIX } from '../lib/demoMode'
 
-const STORAGE_KEY = 'work-search-log:entries:v1'
+const STORAGE_KEY = `work-search-log:entries:v1${STORAGE_SUFFIX}`
 
 function makeId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
 const storedEntries = readJSON<Entry[] | null>(STORAGE_KEY, null)
-// Dev server only, and only on first run — a production build never sees
-// this, and clearing storage or clicking "Clear all" doesn't bring it back.
-const seeded = storedEntries === null && import.meta.env.DEV
+// Only on first run — clearing storage or clicking "Clear all" doesn't bring
+// the sample entries back. See demoMode.ts for when seeding is allowed at all.
+const seeded = storedEntries === null && DEMO_DATA_ENABLED
 
 // Module-level state: every component calling useEntries() shares one store,
 // with no need for provide/inject or a state-management library.
@@ -58,5 +59,14 @@ function replaceAll(next: Entry[]) {
 }
 
 export function useEntries() {
-  return { entries, saveError, addEntry, updateEntry, removeEntry, clearAll, replaceAll }
+  return {
+    entries,
+    saveError,
+    isDemoData: seeded,
+    addEntry,
+    updateEntry,
+    removeEntry,
+    clearAll,
+    replaceAll,
+  }
 }

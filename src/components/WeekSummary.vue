@@ -72,7 +72,7 @@ const thisWeekSegments = computed(() => {
   margin-bottom: 8px;
 }
 .eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--brass);
@@ -113,7 +113,7 @@ const thisWeekSegments = computed(() => {
   color: var(--muted);
 }
 .exempt-badge {
-  font-size: 12px;
+  font-size: 13px;
   padding: 3px 8px;
   border-radius: 10px;
   border: 1px solid var(--brass);
@@ -136,7 +136,7 @@ const thisWeekSegments = computed(() => {
   opacity: 1;
 }
 .caption {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .caption.sub {

@@ -110,7 +110,7 @@ function handleClearAll() {
   border-top: 1px solid var(--line);
 }
 .footer-note {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin: 0 0 12px;
   line-height: 1.6;
@@ -132,7 +132,7 @@ function handleClearAll() {
   border: none;
   color: var(--brass);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   text-decoration: underline;
   cursor: pointer;
   padding: 2px 0;
@@ -147,7 +147,7 @@ function handleClearAll() {
   color: var(--warn);
 }
 .privacy {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .visually-hidden {
@@ -158,7 +158,7 @@ function handleClearAll() {
   clip: rect(0, 0, 0, 0);
 }
 .status {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   text-align: center;
   margin-top: 8px;

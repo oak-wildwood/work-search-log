@@ -13,6 +13,7 @@ import {
 import { evaluateWeeks, type WeekStatus } from './lib/requirements'
 import type { Entry, EntryDraft } from './types'
 import AppHeader from './components/AppHeader.vue'
+import DemoDataBanner from './components/DemoDataBanner.vue'
 import WeekGroup from './components/WeekGroup.vue'
 import EntryForm from './components/EntryForm.vue'
 import Toolbar from './components/Toolbar.vue'
@@ -90,6 +91,7 @@ function handlePrint() {
 </script>
 
 <template>
+  <DemoDataBanner />
   <AppHeader @open-preferences="prefsOpen = true" />
 
   <PreferencesDialog :open="prefsOpen" :first-run="firstRun" @close="prefsOpen = false" />
@@ -179,7 +181,7 @@ main {
   margin: 8px 0 14px;
 }
 .history-label {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--brass);
@@ -190,7 +192,7 @@ main {
   gap: 10px;
 }
 .history-total {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .print-btn {

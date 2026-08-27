@@ -22,10 +22,10 @@
 }
 .empty p {
   margin: 2px 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .hint {
-  font-size: 12px;
+  font-size: 13px;
   font-style: italic;
 }
 </style>

@@ -52,7 +52,7 @@ defineEmits<{ 'open-preferences': [] }>()
   color: var(--warn);
   border-radius: 4px;
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 16px;
 }
 .notice {
@@ -60,7 +60,7 @@ defineEmits<{ 'open-preferences': [] }>()
   border-left: 3px solid var(--brass);
   border-radius: 4px;
   padding: 9px 12px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
   margin: 0 0 12px;
@@ -69,7 +69,7 @@ defineEmits<{ 'open-preferences': [] }>()
   border: none;
   border-left: none;
   padding: 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 .notice a {
   color: var(--brass);

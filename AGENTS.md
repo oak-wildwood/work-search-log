@@ -25,8 +25,21 @@ entries. Prefilling the claimant's _own_ profile data (their name) is fine. Inve
 employer, date, or activity is not, under any framing — the entry would be a fabricated record in a
 document submitted to a government agency.
 
-The one seeded fixture that exists (`src/lib/seedEntries.ts`) is fenced behind `import.meta.env.DEV`
-and must stay that way. A production build starts empty.
+The one seeded fixture that exists (`src/lib/seedEntries.ts`) holds sample entries and the demo
+profile they belong to — `Test User`, `TX`, and a weekly requirement of 3. Both are fenced behind
+the single flag in `src/lib/demoMode.ts`: `import.meta.env.DEV` or an explicit `VITE_DEMO_DATA=1`
+opt-in — never plain truthiness, since Vite inlines env vars as strings and `'0'`/`'false'` are both
+non-empty. The flag exists so a Vercel preview, which no claimant reaches, can show a populated log
+to a reviewer; it is never set for the GitHub Pages build that claimants actually use, and `App.vue`
+renders a `no-print` banner whenever it is on so nobody mistakes sample data for their own record.
+Demo builds also namespace their storage keys with a `:demo` suffix, so running one on a browser
+that holds a real log neither reads nor overwrites it. See
+[ADR 0004](./docs/decisions/0004-no-autofill-no-compliance-claims.md).
+
+That fixture requirement of 3 is the one place a weekly number is written down, and it is fixture
+data rather than a claim about Texas — `tx.json` carries no number, because TWC sets the count by
+county. It must stay inside the fixture: `blankSettings()` and every state config still presume
+nothing, which is what the rule below is about.
 
 **Never assert compliance.** The tool reports what was logged; it does not determine eligibility.
 Copy reads "3 of 4 logged", never "you have met your requirement" or "you're compliant this week".

@@ -19,7 +19,8 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
-      # write, not read: the agent pushes a branch and opens a pull request.
+      # write, not read: the agent pushes a branch, and the step below opens a
+      # pull request for it.
       contents: write
       pull-requests: write
       issues: write
@@ -41,8 +42,104 @@ jobs:
           additional_permissions: |
             actions: read
 
-          # npm/npx so the agent can run the suite on its own work; gh pr
-          # create because the action otherwise only leaves a "Create PR" link.
+          # npm/npx so the agent can run the suite on its own work; gh pr view
+          # so it can read PR state. Opening the pull request is the next step's
+          # job, not the agent's — see the comment there.
           # It still cannot edit .github/workflows/ — that's a token limit.
           claude_args: >-
-            --allowedTools "Bash(npm:*),Bash(npx:*),Bash(gh pr create:*),Bash(gh pr view:*)"
+            --allowedTools "Bash(npm:*),Bash(npx:*),Bash(gh pr view:*)"
+
+      # The action injects its own instruction sheet ahead of the issue text, and
+      # it ends the "straightforward changes" path with "provide a URL to create
+      # a PR manually". That fires on every run, so neither a comment saying
+      # "open a PR" nor AGENTS.md saying the same reliably beats it — the agent
+      # pushes a branch and leaves a link.
+      #
+      # The link is the right default and stays the default. This step exists so
+      # that *asking* for a pull request is no longer precluded by an instruction
+      # nobody can see: say so in the triggering comment and one gets opened, say
+      # nothing and you get the link as before.
+      #
+      # Kept inline rather than extracted to .github/actions/ or a script: the
+      # agent's token cannot write to .github/workflows/, so this is the one
+      # place the mechanism that opens PRs on its behalf stays outside its own
+      # reach. Extract it only if a second caller ever appears, and weigh that.
+      - name: Open a pull request when the trigger asked for one
+        if: steps.claude.outputs.branch_name != '' && steps.claude.outputs.conclusion == 'success'
+        env:
+          # The Claude App token, deliberately, not the default GITHUB_TOKEN: a
+          # pull request opened with GITHUB_TOKEN does not trigger `on:
+          # pull_request`, which would leave ci.yml and the Vercel preview dead
+          # on every agent-authored PR.
+          GH_TOKEN: ${{ steps.claude.outputs.github_token }}
+          BRANCH: ${{ steps.claude.outputs.branch_name }}
+          BASE: ${{ github.event.repository.default_branch }}
+          # Empty for a comment on a pull request, where issue.number is that PR's
+          # own number and "Closes" would aim the new PR at itself.
+          ISSUE: ${{ !github.event.issue.pull_request && github.event.issue.number || '' }}
+          # Whichever body carried the @claude that started this run. Passed as an
+          # env var rather than interpolated into the script, so someone else's
+          # comment text can never be parsed as shell.
+          TRIGGER_TEXT: >-
+            ${{ github.event.review.body || github.event.comment.body
+             || format('{0} {1}', github.event.issue.title, github.event.issue.body) }}
+        run: |
+          set -euo pipefail
+
+          # Deliberately a plain phrase match rather than the agent's judgement:
+          # whether a pull request gets opened should be readable straight off
+          # this file. Past tense ("opened a PR") is excluded, so the agent
+          # narrating its own work can't trip it.
+          if ! grep -qiE '\b(open|create|make|raise|submit|send)[[:space:]]+(a|the)?[[:space:]]*(pr|pull[[:space:]]+request)\b' <<<"$TRIGGER_TEXT"; then
+            echo "The trigger didn't ask for a pull request — leaving the agent's link to stand."
+            exit 0
+          fi
+
+          # Cheapest guard first. On a run triggered from a pull request the agent
+          # pushes to a branch that already has one, which is the common case and
+          # costs a single small request to rule out.
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            echo "A pull request for $BRANCH is already open."
+            exit 0
+          fi
+
+          # Compared through the API rather than with git: the checkout above is
+          # shallow, so there is no merge base locally to count commits against.
+          IFS=$'\t' read -r commits title < <(
+            gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$BRANCH" \
+              --jq '[(.commits | length), ((.commits[0].commit.message // "") | split("\n")[0])] | @tsv'
+          )
+
+          if [ "$commits" -eq 0 ]; then
+            echo "$BRANCH has no commits on top of $BASE — nothing to open."
+            exit 0
+          fi
+
+          # The title is the permanent record — it becomes the squashed commit
+          # subject, while the branch's own commits do not survive the merge. So
+          # borrowing the first commit's subject is only sound when there is
+          # exactly one; with several, the oldest is a positional guess at which
+          # change carries the point, and pr-title.yml validates a title's shape
+          # but can never tell whether it describes the right thing. Anything
+          # ambiguous opens as a draft for a human to title, rather than being
+          # quietly mislabelled in the permanent history.
+          draft=()
+          caveat=""
+          if [ "$commits" -gt 1 ]; then
+            draft=(--draft)
+            caveat="The branch has $commits commits, so this title is only the oldest one's subject, not a summary of the whole change."
+          elif [ "${#title}" -gt 72 ]; then
+            draft=(--draft)
+            caveat="That commit subject is ${#title} characters and pr-title.yml caps titles at 72."
+          fi
+
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          body="Opened automatically from [this run]($run_url) after the agent pushed \`$BRANCH\`."
+          if [ -n "$caveat" ]; then
+            body="$body"$'\n\n'"**Set the title before merging.** $caveat"
+          fi
+          if [ -n "$ISSUE" ]; then
+            body="$body"$'\n\n'"Closes #$ISSUE"
+          fi
+
+          gh pr create --base "$BASE" --head "$BRANCH" --title "$title" --body "$body" "${draft[@]}"
