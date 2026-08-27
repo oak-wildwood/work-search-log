@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useModalDialog } from '../composables/useModalDialog'
 import { useSettings } from '../composables/useSettings'
 import { useTheme } from '../composables/useTheme'
 import { getStateConfig, listStateConfigs } from '../config'
@@ -51,10 +52,7 @@ function reset() {
 }
 
 const dialogEl = ref<HTMLDialogElement | null>(null)
-
-// Restored to whatever it was before locking, rather than assumed to be '',
-// so this doesn't clobber an overflow style some other part of the app set.
-let previousBodyOverflow = ''
+const { show, hide, isBackdropClick, onNativeClose } = useModalDialog(dialogEl)
 
 // `<dialog>`'s own open/closed state is imperative — showModal()/close() rather
 // than an attribute Vue can bind — so it has to be driven from the prop here
@@ -64,58 +62,25 @@ let previousBodyOverflow = ''
 // is guaranteed to exist even when a first run opens the dialog immediately —
 // and since Vue resolves cascading updates within a flush before the browser
 // paints, deferring `reset()` here too doesn't risk a flash of stale fields.
-//
-// showModal() gives focus containment and an inert, top-layer background for
-// free, but — confirmed by hand, not assumed — it does *not* stop the page
-// behind the ::backdrop from scrolling under wheel/touch input. That still
-// has to be locked explicitly.
 watch(
   () => props.open,
   (open) => {
     if (open) {
       reset()
-      dialogEl.value?.showModal()
-      previousBodyOverflow = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
+      show()
     } else {
-      dialogEl.value?.close()
-      document.body.style.overflow = previousBodyOverflow
+      hide()
     }
   },
   { immediate: true, flush: 'post' },
 )
 
-/**
- * `::backdrop` isn't a real element, so a click "on the backdrop" is a click
- * that lands directly on the dialog itself rather than on any of its content —
- * but that's also true of a click in the dialog's own padding, which target
- * equality alone can't tell apart from one. `offsetX`/`offsetY` are relative
- * to the dialog's own padding box regardless of its internal scroll position,
- * so comparing them against its content dimensions catches only clicks that
- * actually fall outside that box — the true backdrop.
- */
 function onDialogClick(event: MouseEvent) {
-  const dialog = dialogEl.value
-  if (!dialog || event.target !== dialog) return
-  const inside =
-    event.offsetX >= 0 &&
-    event.offsetX <= dialog.clientWidth &&
-    event.offsetY >= 0 &&
-    event.offsetY <= dialog.clientHeight
-  if (!inside) dismiss()
+  if (isBackdropClick(event)) dismiss()
 }
 
-/**
- * The native `close` event fires for Escape and backdrop-driven cancellation
- * as well as our own programmatic `close()` call below. Routing it through
- * `dismiss()` is what makes Escape count as "seen" for onboarding purposes —
- * but `dismiss()` itself triggers that same `close()` call via the watcher
- * above, which would re-enter here a second time once the dialog is already
- * closed. Checking `props.open` first — true only when the browser initiated
- * this, not us — keeps `dismiss()` to a single call either way.
- */
-function onNativeClose() {
-  if (props.open) dismiss()
+function handleNativeClose() {
+  onNativeClose(dismiss)
 }
 
 const countHint = computed(() => {
@@ -164,7 +129,7 @@ function dismiss() {
       class="panel no-print"
       aria-labelledby="prefs-title"
       @click="onDialogClick"
-      @close="onNativeClose"
+      @close="handleNativeClose"
     >
       <h2 id="prefs-title">{{ firstRun ? 'Set up your log' : 'Preferences' }}</h2>
       <p v-if="firstRun" class="lede">

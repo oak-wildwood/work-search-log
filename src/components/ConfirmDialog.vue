@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useModalDialog } from '../composables/useModalDialog'
 
 withDefaults(
   defineProps<{
@@ -17,8 +18,8 @@ withDefaults(
 )
 
 const dialogEl = ref<HTMLDialogElement | null>(null)
+const { show, hide, isBackdropClick, onNativeClose } = useModalDialog(dialogEl)
 
-let previousBodyOverflow = ''
 let resolveOpen: ((confirmed: boolean) => void) | null = null
 
 /**
@@ -28,9 +29,7 @@ let resolveOpen: ((confirmed: boolean) => void) | null = null
  * Mirrors `if (confirm(...))` at the call site: `if (await dialog.open())`.
  */
 function open(): Promise<boolean> {
-  previousBodyOverflow = document.body.style.overflow
-  document.body.style.overflow = 'hidden'
-  dialogEl.value?.showModal()
+  show()
   return new Promise((resolve) => {
     resolveOpen = resolve
   })
@@ -39,31 +38,15 @@ function open(): Promise<boolean> {
 function settle(confirmed: boolean) {
   resolveOpen?.(confirmed)
   resolveOpen = null
-  document.body.style.overflow = previousBodyOverflow
-  dialogEl.value?.close()
+  hide()
 }
 
-// The native `close` event also fires for our own `settle()`-driven `.close()`
-// call above, once it's already resolved — `resolveOpen` being null by then is
-// what tells the two apart, so Escape and backdrop clicks only settle once.
-function onNativeClose() {
-  if (resolveOpen) settle(false)
+function handleNativeClose() {
+  onNativeClose(() => settle(false))
 }
 
-/**
- * `::backdrop` isn't a real element, so a click "on it" lands on the dialog
- * itself. `offsetX`/`offsetY` are relative to the dialog's own padding box,
- * so anything outside that box is the true backdrop.
- */
-function onDialogClick(event: MouseEvent) {
-  const dialog = dialogEl.value
-  if (!dialog || event.target !== dialog) return
-  const inside =
-    event.offsetX >= 0 &&
-    event.offsetX <= dialog.clientWidth &&
-    event.offsetY >= 0 &&
-    event.offsetY <= dialog.clientHeight
-  if (!inside) settle(false)
+function handleDialogClick(event: MouseEvent) {
+  if (isBackdropClick(event)) settle(false)
 }
 
 defineExpose({ open })
@@ -76,8 +59,8 @@ defineExpose({ open })
       ref="dialogEl"
       class="panel no-print"
       aria-labelledby="confirm-body"
-      @click="onDialogClick"
-      @close="onNativeClose"
+      @click="handleDialogClick"
+      @close="handleNativeClose"
     >
       <p id="confirm-body" class="body"><slot /></p>
       <!-- `autofocus` here isn't the page-load antipattern the lint rule
