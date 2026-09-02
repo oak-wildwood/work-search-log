@@ -100,6 +100,26 @@ describe('PreferencesDialog', () => {
   })
 
   describe('modal behaviour', () => {
+    it('actually opens when mounted with open already true, as on a first run', async () => {
+      // Regression: App.vue mounts this with `open` already `true` for a
+      // first-run visitor — there's no prior `false` for a prop-change watcher
+      // to react to. An earlier version relied on `watch(..., { immediate:
+      // true, flush: 'post' })` for this case, which does not reliably wait
+      // for `dialogEl` to be populated; `showModal()` would silently no-op
+      // while the page's scroll stayed locked, with no dialog visibly open to
+      // explain why.
+      wrapper = mount(PreferencesDialog, { props: { open: true, firstRun: true } })
+      await nextTick()
+      await nextTick()
+
+      const dialog = document.body.querySelector('dialog')!
+      expect(dialog.open).toBe(true)
+      expect(document.body.style.overflow).toBe('hidden')
+
+      await wrapper.setProps({ open: false })
+      await nextTick()
+    })
+
     it('moves focus into the dialog when it opens', async () => {
       const opener = document.createElement('button')
       document.body.appendChild(opener)
