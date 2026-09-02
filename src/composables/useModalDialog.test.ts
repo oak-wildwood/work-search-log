@@ -27,6 +27,29 @@ describe('useModalDialog', () => {
     dialog.remove()
   })
 
+  it('does not let a redundant show() while already open clobber the restore value', () => {
+    // Regression: a double-click on the button that opens a dialog can call
+    // show() twice before the browser makes the trigger inert. Without a
+    // guard, the second call re-captures `previousBodyOverflow` as 'hidden'
+    // (the value locked in by the first call), so a single hide() afterwards
+    // would restore scroll to 'hidden' instead of the real original value —
+    // permanently locking the page with no dialog left open to explain why.
+    const dialog = makeDialog()
+    const dialogEl = ref(dialog)
+    const { show, hide } = useModalDialog(dialogEl)
+
+    document.body.style.overflow = 'scroll'
+    show()
+    show()
+    expect(document.body.style.overflow).toBe('hidden')
+
+    hide()
+    expect(document.body.style.overflow).toBe('scroll')
+
+    document.body.style.overflow = ''
+    dialog.remove()
+  })
+
   describe('isBackdropClick', () => {
     it('is false for a click that lands on the dialog itself but inside its box', () => {
       const dialog = makeDialog()
