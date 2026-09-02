@@ -6,7 +6,6 @@ week of their benefit year.
 
 <img width="2516" height="2378" alt="2026-09-02 at 2 06 AM" src="https://github.com/user-attachments/assets/33d3b3e1-2871-4b6f-b593-a8450ebabd94" />
 
-
 Everything is entered by hand, grouped by week with a "did I hit my required number of activities
 this week" indicator, and exportable as CSV or a JSON backup. There is no server and no account —
 your data lives only in your browser's local storage, on your machine.

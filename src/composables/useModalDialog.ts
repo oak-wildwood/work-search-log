@@ -22,6 +22,13 @@ export function useModalDialog(dialogEl: Ref<HTMLDialogElement | null>) {
   let hidingProgrammatically = false
 
   function show() {
+    // Guards against a double-invocation (e.g. a double-click on the button
+    // that opens this dialog) re-running the lock while already open — that
+    // would re-capture `previousBodyOverflow` as 'hidden' instead of the real
+    // original value, so the next `hide()` would restore scroll to 'hidden'
+    // and leave the page permanently unscrollable with no dialog left open to
+    // explain why.
+    if (dialogEl.value?.open) return
     previousBodyOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     dialogEl.value?.showModal()
