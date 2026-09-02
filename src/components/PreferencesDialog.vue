@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useModalDialog } from '../composables/useModalDialog'
 import { useSettings } from '../composables/useSettings'
 import { useTheme } from '../composables/useTheme'
@@ -56,24 +56,34 @@ const { show, hide, isBackdropClick, onNativeClose } = useModalDialog(dialogEl)
 
 // `<dialog>`'s own open/closed state is imperative — showModal()/close() rather
 // than an attribute Vue can bind — so it has to be driven from the prop here
-// instead of a `v-if` in the template. `flush: 'post'` (with `immediate`) is
-// what makes this safe to run on mount: it defers the callback until after the
-// initial render, the same point `onMounted` would fire, so `dialogEl.value`
-// is guaranteed to exist even when a first run opens the dialog immediately —
-// and since Vue resolves cascading updates within a flush before the browser
-// paints, deferring `reset()` here too doesn't risk a flash of stale fields.
-watch(
-  () => props.open,
-  (open) => {
-    if (open) {
-      reset()
-      show()
-    } else {
-      hide()
-    }
-  },
-  { immediate: true, flush: 'post' },
-)
+// instead of a `v-if` in the template.
+function applyOpen(open: boolean) {
+  if (open) {
+    reset()
+    show()
+  } else {
+    hide()
+  }
+}
+
+// The initial state has to go through `onMounted` rather than an immediate
+// watcher. `watch(..., { immediate: true, flush: 'post' })` looks like it
+// should defer its first callback until after `dialogEl` is populated — that
+// was the previous approach here — but that first callback is queued the
+// same way any other post-flush job is, from inside `setup()`, before this
+// component's own render has patched the DOM. It can and does run before
+// `dialogEl.value` is set, which silently no-ops `showModal()` while still
+// locking the page's scroll, with no dialog open to explain why. Confirmed
+// against Vue 3.5.40 in both a real browser and jsdom. `onMounted` doesn't
+// have this problem: it only ever fires once `dialogEl` is guaranteed set,
+// which matters here because a first run opens the dialog immediately.
+onMounted(() => {
+  if (props.open) applyOpen(true)
+})
+
+// Later opens/closes don't need `onMounted`'s guarantee — by the time
+// `props.open` can change, the component has been mounted for a while.
+watch(() => props.open, applyOpen)
 
 function onDialogClick(event: MouseEvent) {
   if (isBackdropClick(event)) dismiss()
