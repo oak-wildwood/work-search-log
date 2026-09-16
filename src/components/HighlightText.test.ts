@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import HighlightText from './HighlightText.vue'
 
@@ -48,5 +48,35 @@ describe('HighlightText', () => {
 
     const inactive = mount(HighlightText, { props: { text: 'Acme', query: 'acme' } })
     expect(inactive.get('mark').classes()).not.toContain('active')
+  })
+
+  it('renders an embedded URL as a link that opens in a new tab', () => {
+    const wrapper = mount(HighlightText, {
+      props: { text: 'Apply at https://example.com/jobs', query: '' },
+    })
+    const link = wrapper.get('a')
+    expect(link.text()).toBe('https://example.com/jobs')
+    expect(link.attributes('href')).toBe('https://example.com/jobs')
+    expect(link.attributes('target')).toBe('_blank')
+    expect(link.attributes('rel')).toBe('noopener noreferrer')
+  })
+
+  it('stops a click on the link from bubbling to a wrapping toggle', async () => {
+    const wrapper = mount(HighlightText, {
+      props: { text: 'https://example.com', query: '' },
+    })
+    const parentClick = vi.fn()
+    wrapper.element.parentElement?.addEventListener('click', parentClick)
+
+    await wrapper.get('a').trigger('click')
+    expect(parentClick).not.toHaveBeenCalled()
+  })
+
+  it('still highlights a search match inside a linkified URL', () => {
+    const wrapper = mount(HighlightText, {
+      props: { text: 'https://example.com/jobs', query: 'jobs' },
+    })
+    const link = wrapper.get('a')
+    expect(link.get('mark').text()).toBe('jobs')
   })
 })

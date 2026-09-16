@@ -84,6 +84,23 @@ describe('EntryCard', () => {
     expect(wrapper.get('.details').classes()).toContain('collapsed')
   })
 
+  it('renders a URL in a detail field as a clickable link that does not toggle the card', async () => {
+    wrapper = mount(EntryCard, {
+      props: { entry: entry({ notes: 'Posting at https://example.com/jobs/42' }) },
+    })
+
+    await wrapper.get('.text-link').trigger('click')
+    expect(wrapper.get('.details').classes()).not.toContain('collapsed')
+
+    const link = wrapper.get('.details a')
+    expect(link.attributes('href')).toBe('https://example.com/jobs/42')
+    expect(link.attributes('target')).toBe('_blank')
+    expect(link.attributes('rel')).toBe('noopener noreferrer')
+
+    await link.trigger('click')
+    expect(wrapper.get('.details').classes()).not.toContain('collapsed')
+  })
+
   it('emits edit with the whole entry', async () => {
     const subject = entry({ employer: 'TechNova Systems' })
     wrapper = mount(EntryCard, { props: { entry: subject } })

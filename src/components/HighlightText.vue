@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { splitLinks } from '../lib/linkify'
 
 const props = defineProps<{
   text: string
@@ -9,8 +10,9 @@ const props = defineProps<{
   active?: boolean
 }>()
 
-const parts = computed(() => {
-  const text = props.text ?? ''
+const linkSegments = computed(() => splitLinks(props.text ?? ''))
+
+function matchParts(text: string) {
   const query = props.query
   if (!query) return [{ text, match: false }]
 
@@ -28,14 +30,32 @@ const parts = computed(() => {
     i = idx + query.length
   }
   return result
-})
+}
 </script>
 
 <template>
-  <template v-for="(part, i) in parts" :key="i"
-    ><mark v-if="part.match" :class="{ active }">{{ part.text }}</mark
-    ><template v-else>{{ part.text }}</template></template
-  >
+  <template v-for="(segment, i) in linkSegments" :key="i">
+    <!-- The parent entry card toggles its details on any click; stopping
+         propagation here keeps that from swallowing a click meant for the
+         link, without stopping the browser's own navigation. -->
+    <a
+      v-if="segment.url"
+      :href="segment.url"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="entry-link"
+      @click.stop
+      ><template v-for="(part, j) in matchParts(segment.text)" :key="j"
+        ><mark v-if="part.match" :class="{ active }">{{ part.text }}</mark
+        ><template v-else>{{ part.text }}</template></template
+      ></a
+    ><template v-else
+      ><template v-for="(part, j) in matchParts(segment.text)" :key="j"
+        ><mark v-if="part.match" :class="{ active }">{{ part.text }}</mark
+        ><template v-else>{{ part.text }}</template></template
+      ></template
+    >
+  </template>
 </template>
 
 <style scoped>
@@ -48,5 +68,9 @@ mark {
 mark.active {
   background: var(--stamp);
   color: var(--paper);
+}
+.entry-link {
+  color: var(--brass);
+  text-decoration: underline;
 }
 </style>
