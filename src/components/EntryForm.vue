@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import type { Entry, EntryDraft } from '../types'
 import { useStateConfig } from '../composables/useStateConfig'
 import { resolveActivity } from '../config'
+import { noAutofillAttrs } from '../lib/noAutofill'
 
 const { config } = useStateConfig()
 
@@ -184,6 +185,7 @@ function handleCancel() {
           placeholder="Type the site name"
           aria-label="Site name"
           class="site-other-input"
+          v-bind="noAutofillAttrs"
         />
       </div>
       <div class="field">
@@ -205,7 +207,13 @@ function handleCancel() {
     <div class="two-col">
       <div class="field">
         <label for="f-employer">Employer</label>
-        <input id="f-employer" v-model="draft.employer" type="text" placeholder="Company name" />
+        <input
+          id="f-employer"
+          v-model="draft.employer"
+          type="text"
+          placeholder="Company name"
+          v-bind="noAutofillAttrs"
+        />
       </div>
       <div class="field">
         <label for="f-jobtype">Job sought</label>
@@ -214,6 +222,7 @@ function handleCancel() {
           v-model="draft.jobType"
           type="text"
           placeholder="e.g. Warehouse associate"
+          v-bind="noAutofillAttrs"
         />
       </div>
     </div>
@@ -229,11 +238,18 @@ function handleCancel() {
             v-model="draft.address"
             type="text"
             placeholder="Address, email, or URL"
+            v-bind="noAutofillAttrs"
           />
         </div>
         <div class="field">
           <label for="f-phone">Employer phone (with area code)</label>
-          <input id="f-phone" v-model="draft.phone" type="text" placeholder="(xxx) xxx-xxxx" />
+          <input
+            id="f-phone"
+            v-model="draft.phone"
+            type="text"
+            placeholder="(xxx) xxx-xxxx"
+            v-bind="noAutofillAttrs"
+          />
         </div>
       </div>
 
@@ -245,6 +261,7 @@ function handleCancel() {
             v-model="draft.contactName"
             type="text"
             placeholder="Person you spoke with"
+            v-bind="noAutofillAttrs"
           />
         </div>
         <div class="field">

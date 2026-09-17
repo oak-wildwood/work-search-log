@@ -4,6 +4,7 @@ import { useModalDialog } from '../composables/useModalDialog'
 import { useSettings } from '../composables/useSettings'
 import { useTheme } from '../composables/useTheme'
 import { getStateConfig, listStateConfigs } from '../config'
+import { noAutofillAttrs } from '../lib/noAutofill'
 import { resolveRequirement } from '../lib/requirements'
 import { currentWeekKey } from '../lib/weeks'
 
@@ -148,7 +149,12 @@ function dismiss() {
 
       <label class="field">
         <span class="label">Your name</span>
-        <input v-model="draftName" type="text" placeholder="For the printed log" />
+        <input
+          v-model="draftName"
+          type="text"
+          placeholder="For the printed log"
+          v-bind="noAutofillAttrs"
+        />
       </label>
 
       <label class="field">
