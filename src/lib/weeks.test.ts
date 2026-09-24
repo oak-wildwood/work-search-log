@@ -90,10 +90,17 @@ describe('groupByWeek', () => {
     expect(groups[1].start.getDate()).toBe(2)
   })
 
-  it('orders entries within a group most recent first', () => {
+  it('orders entries within a group most recently entered first', () => {
     const entries = [makeEntry('2026-08-10'), makeEntry('2026-08-12'), makeEntry('2026-08-11')]
     const groups = groupByWeek(entries)
     expect(groups[0].entries.map((e) => e.date)).toEqual(['2026-08-12', '2026-08-11', '2026-08-10'])
+  })
+
+  it('puts a just-submitted entry at the top of its week, even if its activity date is older', () => {
+    const earlier = { ...makeEntry('2026-08-10', 'a'), createdAt: '2026-08-10T09:00:00.000Z' }
+    const justSubmitted = { ...makeEntry('2026-08-09', 'b'), createdAt: '2026-08-12T09:00:00.000Z' }
+    const groups = groupByWeek([earlier, justSubmitted])
+    expect(groups[0].entries.map((e) => e.id)).toEqual(['b', 'a'])
   })
 
   it('splits weeks on the configured start day', () => {

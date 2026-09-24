@@ -84,8 +84,10 @@ export function groupByWeek(entries: Entry[], weekStartDay = 0): WeekGroup[] {
     group.entries.push(entry)
   }
 
+  // Most recently entered first, so submitting an entry puts it at the top of
+  // its week regardless of the activity date within that week.
   for (const group of groups.values()) {
-    group.entries.sort((a, b) => b.date.localeCompare(a.date))
+    group.entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
 
   return [...groups.values()].sort((a, b) => b.key.localeCompare(a.key))
