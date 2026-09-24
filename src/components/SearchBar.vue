@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useSearch } from '../composables/useSearch'
 
 const { searchQuery, matchCount, activeIndex, next, prev } = useSearch()
+
+const inputEl = ref<HTMLInputElement>()
 
 const statusText = computed(() =>
   matchCount.value ? `${activeIndex.value + 1} of ${matchCount.value}` : 'No matches',
@@ -11,6 +13,22 @@ const statusText = computed(() =>
 function clear() {
   searchQuery.value = ''
 }
+
+/**
+ * Global rather than scoped to the input, since the whole point is jumping to
+ * search from anywhere on the page. A native modal `<dialog>` (Preferences,
+ * confirm prompts) makes everything outside it inert, so `focus()` already
+ * no-ops while one is open without checking for it here.
+ */
+function onGlobalKeydown(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    inputEl.value?.focus()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onGlobalKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onGlobalKeydown))
 
 /**
  * Enter/Shift+Enter step through matches, matching how browser find-in-page
@@ -35,6 +53,7 @@ function onKeydown(e: KeyboardEvent) {
   <div class="search-bar no-print" role="search">
     <span class="search-icon" aria-hidden="true">⌕</span>
     <input
+      ref="inputEl"
       v-model="searchQuery"
       type="search"
       class="search-input"
@@ -80,6 +99,12 @@ function onKeydown(e: KeyboardEvent) {
   background: var(--card);
   padding: 6px 12px;
   margin-bottom: 16px;
+  /* Floats over the results once scrolled, offset by the demo banner's own
+     height (0 when it isn't rendered) so the two don't stack on each other. */
+  position: sticky;
+  top: var(--demo-banner-height, 0px);
+  z-index: 5;
+  box-shadow: 0 2px 6px var(--shadow);
 }
 .search-icon {
   color: var(--brass);

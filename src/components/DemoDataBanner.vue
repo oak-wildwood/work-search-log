@@ -2,11 +2,31 @@
 // Keyed to the flag rather than to whether entries were actually seeded: the
 // profile seeds on its own condition, so a build with real entries but a demo
 // profile would otherwise say nothing.
+import { onMounted, onUnmounted, ref } from 'vue'
 import { DEMO_DATA_ENABLED } from '../lib/demoMode'
+
+const bannerEl = ref<HTMLElement>()
+
+// Published as a CSS variable so the sticky search bar can offset below this
+// banner instead of the two overlapping once both are pinned to the top.
+function publishHeight() {
+  if (bannerEl.value) {
+    document.documentElement.style.setProperty(
+      '--demo-banner-height',
+      `${bannerEl.value.offsetHeight}px`,
+    )
+  }
+}
+
+onMounted(() => {
+  publishHeight()
+  window.addEventListener('resize', publishHeight)
+})
+onUnmounted(() => window.removeEventListener('resize', publishHeight))
 </script>
 
 <template>
-  <p v-if="DEMO_DATA_ENABLED" class="demo-banner no-print" role="status">
+  <p v-if="DEMO_DATA_ENABLED" ref="bannerEl" class="demo-banner no-print" role="status">
     Sample data — this profile and these entries are for demonstration only and are not a real work
     search record.
   </p>
