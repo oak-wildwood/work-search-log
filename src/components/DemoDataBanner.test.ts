@@ -32,4 +32,10 @@ describe('DemoDataBanner', () => {
     expect(wrapper.text().toLowerCase()).toContain('not a real work search record')
     expect(wrapper.get('.demo-banner').classes()).toContain('no-print')
   })
+
+  it('publishes its own height as a CSS variable so a sticky search bar can offset below it', async () => {
+    vi.stubEnv('VITE_DEMO_DATA', '1')
+    await mountBanner()
+    expect(document.documentElement.style.getPropertyValue('--demo-banner-height')).toMatch(/px$/)
+  })
 })

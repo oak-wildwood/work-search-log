@@ -18,6 +18,10 @@
 
   --font-display: 'Spectral', serif;
   --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Set by DemoDataBanner when it renders, so anything else that sticks to
+     the viewport top can offset below it instead of stacking on top of it. */
+  --demo-banner-height: 0px;
 }
 
 :root[data-theme='dark'] {
