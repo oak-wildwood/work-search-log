@@ -16,19 +16,27 @@ existing `saveError` flag once the adapter settles. `LocalStorageEntryRepository
 `InMemoryEntryRepository` exists for tests only. `describeEntryRepositoryContract` in
 `src/lib/entryRepositoryContract.ts` is a shared suite each adapter's test file calls.
 
-`useEntries` depends only on the interface. Id generation and timestamps stay in the composable.
-The `entries` ref still updates synchronously; only persistence is async, and writes are chained
-so they reach the repository in order.
+`useEntries` depends only on the interface: `createEntriesStore(repository)` builds the store,
+`useEntries()` returns the one the app builds over `LocalStorageEntryRepository`, and tests build
+their own over other adapters. Id generation and timestamps stay in the composable. The `entries`
+ref still updates synchronously; only persistence is async, and writes are chained so they reach
+the repository in order.
+
+**Failed writes.** The in-memory log is what the claimant sees, so after any failed write the next
+write is a full `replaceAll(entries.value)` rather than a single-entry change, and `saveError`
+clears only once that succeeds. Without this, a later small write would succeed while an earlier
+entry stayed unsaved, and the warning would disappear.
 
 **Synchronous initial read.** The first render must already have the stored entries, and seeding
 depends on distinguishing "never stored" from "stored empty". So the interface has an optional
 `loadSync()`; the localStorage adapter implements it and the composable uses it at import time.
 An adapter without it starts empty and hydrates from `list()` when that settles (skipped if the
-claimant has already changed something).
+claimant has already changed something). Demo seeding also needs that knowledge, so it only
+happens for adapters with `loadSync`; an async backend is never overwritten with sample data.
 
 ## Consequences
 
-- Behaviour a claimant sees is unchanged; this is groundwork for opt-in backends.
+- Behavior a claimant sees is unchanged; this is groundwork for opt-in backends.
 - Adding a backend means a new adapter that passes the contract, not edits to components.
 - [ADR 0001](./0001-browser-only-storage.md) is unchanged: nothing leaves the browser until an
   adapter that does so exists and is opted into.

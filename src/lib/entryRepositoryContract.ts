@@ -25,7 +25,7 @@ function makeEntry(id: string, overrides: Partial<Entry> = {}): Entry {
 }
 
 /**
- * Behaviour every EntryRepository adapter must share. Adapter test files call
+ * Behavior every EntryRepository adapter must share. Adapter test files call
  * this with a factory returning a fresh, empty repository.
  */
 export function describeEntryRepositoryContract(

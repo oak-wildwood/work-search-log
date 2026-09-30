@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Entry } from '../types'
+import { InMemoryEntryRepository } from '../lib/entryRepository'
+import { createEntriesStore } from './useEntries'
 
 /**
  * The seed flag is read once at module load time (see useEntries.ts), so each
@@ -10,6 +13,32 @@ async function loadEntries() {
   const mod = await import('./useEntries')
   return mod.useEntries()
 }
+
+const draft = {
+  date: '2000-01-03',
+  activity: 'Test activity',
+  siteAppliedOn: '',
+  jobType: '',
+  employer: 'Test Employer',
+  address: '',
+  phone: '',
+  contactName: '',
+  contactMethod: '',
+  result: '',
+  notes: '',
+}
+
+function entryFor(id: string): Entry {
+  return {
+    ...draft,
+    id,
+    createdAt: '2000-01-03T00:00:00.000Z',
+    updatedAt: '2000-01-03T00:00:00.000Z',
+  }
+}
+
+const stored = () => JSON.parse(localStorage.getItem(`work-search-log:entries:v1`) ?? 'null')
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('useEntries seeding', () => {
   beforeEach(() => {
@@ -67,21 +96,6 @@ describe('useEntries persistence', () => {
     vi.restoreAllMocks()
   })
 
-  const draft = {
-    date: '2000-01-03',
-    activity: 'Test activity',
-    siteAppliedOn: '',
-    jobType: '',
-    employer: 'Test Employer',
-    address: '',
-    phone: '',
-    contactName: '',
-    contactMethod: '',
-    result: '',
-    notes: '',
-  }
-  const stored = () => JSON.parse(localStorage.getItem(`work-search-log:entries:v1`) ?? 'null')
-
   it('persists add, update, remove and replace, updating the ref synchronously', async () => {
     const store = await loadEntries()
     store.addEntry(draft)
@@ -93,9 +107,7 @@ describe('useEntries persistence', () => {
     expect(stored()).toHaveLength(1)
     store.removeEntry(id)
     await vi.waitFor(() => expect(stored()).toEqual([]))
-    store.replaceAll([
-      { ...store.entries.value[0], ...draft, id: 'x', createdAt: '', updatedAt: '' },
-    ])
+    store.replaceAll([{ ...draft, id: 'x', createdAt: '', updatedAt: '' }])
     await vi.waitFor(() => expect(stored()).toHaveLength(1))
     store.clearAll()
     await vi.waitFor(() => expect(stored()).toEqual([]))
@@ -110,5 +122,79 @@ describe('useEntries persistence', () => {
     store.addEntry(draft)
     expect(store.entries.value).toHaveLength(1)
     await vi.waitFor(() => expect(store.saveError.value).toBe(true))
+  })
+
+  it('saves the whole log after a failed write, and only then clears saveError', async () => {
+    const store = await loadEntries()
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+      throw new Error('quota')
+    })
+    store.addEntry({ ...draft, employer: 'Test Employer A' })
+    await vi.waitFor(() => expect(store.saveError.value).toBe(true))
+    expect(stored()).toBeNull()
+
+    store.addEntry({ ...draft, employer: 'Test Employer B' })
+    await vi.waitFor(() => expect(store.saveError.value).toBe(false))
+    expect(stored().map((e: Entry) => e.employer)).toEqual(['Test Employer A', 'Test Employer B'])
+  })
+
+  it('does not bring back a removed entry after a failed remove', async () => {
+    const store = await loadEntries()
+    store.addEntry({ ...draft, employer: 'Test Employer A' })
+    await vi.waitFor(() => expect(stored()).toHaveLength(1))
+    const id = store.entries.value[0].id
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+      throw new Error('quota')
+    })
+    store.removeEntry(id)
+    await vi.waitFor(() => expect(store.saveError.value).toBe(true))
+
+    store.addEntry({ ...draft, employer: 'Test Employer B' })
+    await vi.waitFor(() => expect(store.saveError.value).toBe(false))
+    expect(stored().map((e: Entry) => e.employer)).toEqual(['Test Employer B'])
+  })
+})
+
+describe('useEntries over an adapter with no synchronous read', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.stubEnv('DEV', false)
+    vi.stubEnv('VITE_DEMO_DATA', undefined)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('starts empty, then hydrates from list()', async () => {
+    const repository = new InMemoryEntryRepository()
+    await repository.replaceAll([entryFor('stored')])
+    const store = createEntriesStore(repository)
+    expect(store.entries.value).toEqual([])
+    await vi.waitFor(() => expect(store.entries.value).toEqual([entryFor('stored')]))
+  })
+
+  it('does not replace what the claimant changed before list() settled', async () => {
+    const repository = new InMemoryEntryRepository()
+    await repository.replaceAll([entryFor('stored')])
+    const store = createEntriesStore(repository)
+    store.addEntry({ ...draft, employer: 'Test Employer A' })
+    await flush()
+    expect(store.entries.value.map((e) => e.employer)).toEqual(['Test Employer A'])
+    expect(await repository.list()).toHaveLength(2)
+  })
+
+  it('never seeds sample data over its contents, even in a demo build', async () => {
+    vi.stubEnv('VITE_DEMO_DATA', '1')
+    vi.resetModules()
+    const { createEntriesStore: createDemoStore } = await import('./useEntries')
+    const repository = new InMemoryEntryRepository()
+    await repository.replaceAll([entryFor('stored')])
+    const store = createDemoStore(repository)
+    expect(store.isDemoData).toBe(false)
+    await flush()
+    expect(await repository.list()).toEqual([entryFor('stored')])
+    expect(store.entries.value).toEqual([entryFor('stored')])
   })
 })
