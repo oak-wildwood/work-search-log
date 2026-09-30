@@ -21,6 +21,20 @@ export interface EntryRepository {
    * the composable hydrates from `list()` once it settles.
    */
   loadSync?(): Entry[] | null
+  /**
+   * Optional. For adapters whose backing store can gain entries after `loadSync`
+   * returned (a server reconciled in the background). The listener gets the full
+   * reconciled list each time; the returned function unsubscribes. It is a pull of
+   * what the backend holds, never an instruction to delete from memory.
+   */
+  onReconciled?(listener: (entries: Entry[]) => void): () => void
+}
+
+/** Whether timestamp `a` is strictly after `b`; unparseable values compare as strings. */
+export function isLaterTimestamp(a: string, b: string): boolean {
+  const ta = Date.parse(a)
+  const tb = Date.parse(b)
+  return Number.isNaN(ta) || Number.isNaN(tb) ? a > b : ta > tb
 }
 
 export const STORAGE_KEY = `work-search-log:entries:v1${STORAGE_SUFFIX}`
