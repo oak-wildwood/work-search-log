@@ -82,6 +82,9 @@ function isEntry(value: unknown): value is Entry {
 
 type Fetched = { result: ConnectionResult; entries?: Entry[] }
 
+/** A response whose body has already been read, so nothing is left to stall on. */
+type Reply = { ok: boolean; status: number; text: string }
+
 /**
  * Stores entries in localStorage first, then mirrors them to a companion service on
  * this machine. The server being down, refused, or answering nonsense never loses
@@ -243,15 +246,37 @@ export class LocalServerRepository implements EntryRepository {
     return this.local.replaceAll(change(this.local.loadSync() ?? []))
   }
 
-  /** Resolves to null when the request fails outright (network error or timeout). */
+  /**
+   * Resolves to null when the request fails outright: a network error, or a timeout
+   * waiting for the headers or for the body. The body is read here, inside the
+   * timeout, because the queue is serial and one stalled read would block every
+   * later request. `timed: false` waits on the headers without limit, for a request
+   * that may be waiting on the permission prompt; once they arrive the prompt is
+   * over, so the body is always timed.
+   */
   private async send(
     method: string,
     path: string,
     body?: unknown,
     timed = true,
-  ): Promise<Response | null> {
+  ): Promise<Reply | null> {
     const controller = new AbortController()
-    let timer: ReturnType<typeof setTimeout> | undefined
+    const limit = async <T>(work: Promise<T>): Promise<T> => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        return await Promise.race([
+          work,
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+              controller.abort()
+              reject(new Error('timeout'))
+            }, this.timeoutMs)
+          }),
+        ])
+      } finally {
+        clearTimeout(timer)
+      }
+    }
     try {
       const headers: Record<string, string> = { Authorization: `Bearer ${this.token}` }
       if (body !== undefined) headers['Content-Type'] = 'application/json'
@@ -262,18 +287,11 @@ export class LocalServerRepository implements EntryRepository {
         redirect: 'error',
         signal: controller.signal,
       })
-      if (!timed) return await request
-      const timeout = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => {
-          controller.abort()
-          reject(new Error('timeout'))
-        }, this.timeoutMs)
-      })
-      return await Promise.race([request, timeout])
+      const res = await (timed ? limit(request) : request)
+      const text = await limit(res.text())
+      return { ok: res.ok, status: res.status, text }
     } catch {
       return null
-    } finally {
-      clearTimeout(timer)
     }
   }
 
@@ -283,7 +301,7 @@ export class LocalServerRepository implements EntryRepository {
     if (res.status === 401 || res.status === 403) return { result: { kind: 'unauthorized' } }
     if (!res.ok) return { result: { kind: 'unreachable' } }
     try {
-      const body: unknown = await res.json()
+      const body: unknown = JSON.parse(res.text)
       if (Array.isArray(body) && body.every(isEntry)) {
         return { result: { kind: 'connected' }, entries: body }
       }

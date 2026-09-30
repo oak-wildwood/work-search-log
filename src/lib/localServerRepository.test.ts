@@ -113,6 +113,15 @@ function stubPermission(state: string | Error) {
   return query
 }
 
+/** Headers arrive, but the body never finishes. */
+const stalledBody = () =>
+  new Response(
+    new ReadableStream({
+      start: (controller) => controller.enqueue(new TextEncoder().encode('[')),
+    }),
+    { status: 200 },
+  )
+
 const make = (opts: Partial<ConstructorParameters<typeof LocalServerRepository>[0]> = {}) =>
   new LocalServerRepository({ baseUrl: BASE, token: TOKEN, ...opts })
 const settle = async (repo: LocalServerRepository) => {
@@ -298,6 +307,20 @@ describe('unreachable is not empty', () => {
     expect(await done).toBe(false)
     expect(repo.pendingCount()).toBe(1)
     expect(localIds()).toEqual(['a'])
+  })
+
+  it('times out a response whose body stalls, without blocking what comes after', async () => {
+    vi.useFakeTimers()
+    const server = installFakeServer()
+    server.respond = stalledBody
+    const repo = make({ reconcileOnLoad: false, timeoutMs: 1000 })
+    const stalled = repo.reconcile()
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(await stalled).toBe(false)
+    server.respond = null
+    const next = repo.reconcile()
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(await next).toBe(true)
   })
 })
 
@@ -642,6 +665,17 @@ describe('loopback-network permission', () => {
     expect(settled).toBe(false)
     release(new Response('[]', { status: 200 }))
     expect(await result).toEqual({ kind: 'connected' })
+  })
+
+  it('times out a body that stalls after the prompt was answered', async () => {
+    vi.useFakeTimers()
+    stubPermission('prompt')
+    const server = installFakeServer()
+    server.respond = stalledBody
+    const repo = make({ reconcileOnLoad: false, timeoutMs: 1000 })
+    const result = repo.testConnection()
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(await result).toEqual({ kind: 'unreachable' })
   })
 
   it('treats unsupported like granted', async () => {
