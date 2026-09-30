@@ -93,8 +93,8 @@ off unless you turn it on, it works in Chrome, and your entries stay in the brow
 - **Nothing is sent until you press Test connection.** Not on load, not on a timer, not when you save.
   The token you enter is kept in this browser only, and never appears in the JSON backup, the CSV or
   the printed sheet.
-- **Turning it on copies your log** to the server after you confirm. Nothing is deleted from the
-  browser. The change applies the next time you open the app.
+- **Turning it on copies your log** to the server, after you confirm, the next time you open the app.
+  Nothing is deleted from the browser.
 - **Turning it off** goes back to browser storage, leaves whatever is on the server alone, and forgets
   the token.
 - **A server that is down never stops you logging.** The entry is saved in the browser and the

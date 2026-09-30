@@ -38,9 +38,7 @@ const formError = ref('')
 const status = ref<Status>({ kind: 'idle' })
 const consentDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null)
 
-// The probe is a plain object, never a Vue proxy: it is an adapter, like the ones the
-// store is handed. `testedKey` remembers which address and token it last connected to.
-let probe: LocalServerRepository | null = null
+// Which address and token last connected. Not reactive: only `commit()` reads it.
 let testedKey: string | null = null
 const keyOf = () => `${draftUrl.value.trim()}\n${draftToken.value}`
 
@@ -54,7 +52,6 @@ function reset() {
   draftToken.value = storage.value.token
   formError.value = ''
   status.value = { kind: 'idle' }
-  probe = null
   testedKey = null
 }
 
@@ -62,7 +59,6 @@ function reset() {
 watch([draftUrl, draftToken], () => {
   formError.value = ''
   if (testedKey !== null && testedKey !== keyOf()) {
-    probe = null
     testedKey = null
     status.value = { kind: 'idle' }
   }
@@ -126,7 +122,6 @@ async function runTest() {
   // No reconcile: that would copy the log to the server before consent is asked for.
   const result = await candidate.testConnection({ reconcile: false })
   if (result.kind === 'connected') {
-    probe = candidate
     testedKey = keyOf()
     status.value = { kind: 'connected' }
   } else if ((await candidate.permission()) === 'denied') {
@@ -162,19 +157,21 @@ async function commit(): Promise<boolean> {
     formError.value = urlError.value
     return false
   }
-  if (probe === null || testedKey !== keyOf()) {
+  if (testedKey !== keyOf()) {
     formError.value = 'Test the connection before turning this on.'
     return false
   }
 
-  // A different server starts out empty, so it gets a copy of the log too. The
-  // adapter mirrors every entry it lacks, so this is consent to turn it on.
+  // A different server starts out empty, so it gets a copy of the log too. The adapter
+  // mirrors every entry it lacks, so this is consent to turn it on. The copy itself waits
+  // for the next load: this session keeps storing in the browser only, and copying now
+  // would put on the server entries the claimant may remove before then, which the next
+  // load would then bring back.
   const copying =
     (saved.backend !== 'local-server' || saved.serverUrl !== url) && entries.value.length > 0
   if (copying && !(await consentDialog.value?.open())) return false
 
   save({ backend: 'local-server', serverUrl: url, token: draftToken.value })
-  if (copying) void probe.reconcile()
   return true
 }
 
@@ -275,7 +272,8 @@ defineExpose({ reset, commit })
 
     <ConfirmDialog ref="consentDialog" confirm-label="Turn on and copy">
       Copy your {{ entries.length }} {{ entries.length === 1 ? 'entry' : 'entries' }} to the server
-      on this computer? They also stay in this browser, and nothing is deleted.
+      on this computer the next time you open the app? They also stay in this browser, and nothing
+      is deleted.
     </ConfirmDialog>
   </fieldset>
 </template>

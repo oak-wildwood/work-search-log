@@ -33,9 +33,12 @@ request is the Test connection button. While Chrome's permission prompt is open 
 timeout and the button disabled, since a timeout would cancel the prompt before it is read.
 
 **Consent is consent to turn it on.** The adapter mirrors every entry the server lacks, whenever it is
-on, so the confirmation dialog that offers to copy the log is the gate on enabling: Confirm turns it on
-and copies, Cancel changes nothing. Nothing local is ever deleted. Turning it off returns to browser
-storage, leaves the server as it was, and forgets the token (the address is kept).
+on, so the confirmation dialog that offers to copy the log is the gate on enabling: Confirm turns it on,
+Cancel changes nothing. The copy happens on the next load, not at confirmation: until then the session
+still stores in the browser only, so copying earlier would put entries on the server that the claimant
+might remove before reloading, and the next load would bring them back. Nothing local is ever deleted.
+Turning it off returns to browser storage, leaves the server as it was, and forgets the token (the
+address is kept).
 
 **The token is kept apart.** It lives in `localStorage` under its own key, not in `Settings`, because
 `settings` is handed whole to the print view. It never appears in the JSON backup, the CSV, or the

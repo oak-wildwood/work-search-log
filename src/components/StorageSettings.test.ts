@@ -24,14 +24,16 @@ interface Call {
 let calls: Call[] = []
 
 /** Stubs fetch with a handler, recording each call. */
-function stubFetch(handler: (method: string, url: string) => Response | Promise<Response>) {
+function stubFetch(
+  handler: (method: string, url: string, body?: string) => Response | Promise<Response>,
+) {
   calls = []
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
       const method = init.method ?? 'GET'
       calls.push({ method, url })
-      return handler(method, url)
+      return handler(method, url, init.body as string | undefined)
     }),
   )
 }
@@ -362,7 +364,7 @@ describe('StorageSettings', () => {
       expect(saved()).toBeNull()
     })
 
-    it('asks before copying the log, and copies it on confirm', async () => {
+    it('asks before turning it on, and copies the log on the next load rather than now', async () => {
       healthyServer()
       logSyntheticEntry()
       await mountSection()
@@ -373,6 +375,7 @@ describe('StorageSettings', () => {
       await flushPromises()
       const dialog = body().get('dialog[open]')
       expect(dialog.text()).toContain('Copy your 1 entry')
+      expect(dialog.text()).toContain('the next time you open the app')
       expect(saved()).toBeNull()
       await dialog.findAll('button')[1].trigger('click')
       expect(await done).toBe(true)
@@ -382,9 +385,47 @@ describe('StorageSettings', () => {
         serverUrl: DEFAULT_SERVER_URL,
         token: TOKEN,
       })
+      await flushPromises()
+      // This session still stores in the browser only, so nothing is copied yet.
+      expect(calls.map((c) => c.method)).toEqual(['GET'])
+
+      // A reload builds the repository again, and that is what copies the log.
+      createEntryRepository()
       await vi.waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1))
       expect(calls.find((c) => c.method === 'POST')!.url).toMatch(/\/wsl\/entries:bulk$/)
       expect(useEntries().entries.value).toHaveLength(1)
+    })
+
+    it('does not bring back an entry removed between turning it on and reloading', async () => {
+      const onServer = new Map<string, unknown>()
+      stubFetch((method, _url, body) => {
+        if (method === 'POST') {
+          for (const entry of JSON.parse(body!).entries) onServer.set(entry.id, entry)
+          return new Response('{}')
+        }
+        return new Response(JSON.stringify([...onServer.values()]))
+      })
+      logSyntheticEntry()
+      await mountSection()
+      await chooseServer()
+      await press()
+      const done = exposed().commit()
+      await flushPromises()
+      await body().get('dialog[open]').findAll('button')[1].trigger('click')
+      expect(await done).toBe(true)
+
+      // Changes made before the reload only reach the browser's own copy.
+      const { entries, removeEntry } = useEntries()
+      removeEntry(entries.value[0].id)
+      await flushPromises()
+
+      createEntryRepository()
+      await vi.waitFor(() => expect(calls.filter((c) => c.method === 'GET')).toHaveLength(2))
+      await flushPromises()
+
+      expect(onServer.size).toBe(0)
+      expect(calls.filter((c) => c.method === 'POST')).toEqual([])
+      expect(JSON.parse(localStorage.getItem('work-search-log:entries:v1') ?? '[]')).toEqual([])
     })
 
     it('changes nothing, and copies nothing, when the copy is declined', async () => {
