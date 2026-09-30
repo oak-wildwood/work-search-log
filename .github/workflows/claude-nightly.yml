@@ -10,7 +10,7 @@ name: Claude Nightly
 
 on:
   schedule:
-    - cron: '0 9 * * *'  # GitHub cron runs in UTC — adjust to your own off-hours
+    - cron: '0 9 * * *' # GitHub cron runs in UTC — adjust to your own off-hours
   workflow_dispatch:
     inputs:
       issue_number:
