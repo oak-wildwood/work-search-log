@@ -112,7 +112,8 @@ const countHint = computed(() => {
 
 async function save() {
   // First, so a server that can't be turned on leaves every other draft untouched.
-  if (!(await storageSettings.value?.commit())) return
+  // The section isn't rendered on a first run, and then there is nothing to commit.
+  if (storageSettings.value && !(await storageSettings.value.commit())) return
   setName(draftName.value)
   setStateCode(draftState.value || null)
   const count =
