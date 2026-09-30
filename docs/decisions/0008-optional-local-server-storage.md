@@ -57,6 +57,8 @@ server.
 
 - Chrome is the only browser this backend targets. It asks the claimant once per site to allow reaching a
   loopback address, and only the permission state tells a refusal apart from a server that isn't running.
+  Chrome words the prompt "Access other apps and services on this device" and lists the permission as
+  "Apps on device" in site settings; the Permissions API calls it `loopback-network`.
 - When a test fails the page can't distinguish four causes (permission refused, server not running, wrong
   address or port, origin not on the server's allowed list), so the UI lists all four.
 - After an offline "Clear all", entries that exist only on the server come back once the clear has

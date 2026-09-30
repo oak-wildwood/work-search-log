@@ -100,14 +100,15 @@ off unless you turn it on, it works in Chrome, and your entries stay in the brow
 - **A server that is down never stops you logging.** The entry is saved in the browser and the
   settings panel shows how many changes are waiting.
 
-Chrome asks you once, per site, to allow a public page to reach an address on your own computer, and
-holds the first request until you answer.
-<!-- TODO(chrome-wording): paste Chrome's exact prompt wording and the site-settings path for
-re-allowing it, copied from the browser (issue #53, item 5). -->
+Chrome asks you once, per site, and holds the first request until you answer. The prompt reads
+"_oak-wildwood.github.io_ wants to / Access other apps and services on this device", with **Block** and
+**Allow** buttons (the site name will be whichever address you use the app from). If you chose Block,
+or want to undo an Allow, click the site icon at the left of Chrome's address bar, choose **Site
+settings**, and change **Apps on device** to Ask or Allow.
 
-If the test doesn't say **Connected**, the page can't tell these apart, so check each in turn: the
-permission was refused, the server isn't running, the port or address is wrong, or this site's address
-isn't on the server's list of allowed origins.
+If the test doesn't say **Connected**, the page can't tell these apart, so check each in turn: you
+chose Block on that prompt, the server isn't running, the port or address is wrong, or this site's
+address isn't on the server's list of allowed origins. Chrome reports all four the same way.
 
 On GitHub Pages every project site under one account shares an origin, and so shares the browser
 storage the token sits in. See [ADR 0008](./docs/decisions/0008-optional-local-server-storage.md) for

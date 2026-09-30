@@ -20,6 +20,13 @@ type Status =
   | { kind: 'unreachable'; pending: number }
   | { kind: 'malformed' }
 
+// Copied from Chrome itself: the permission prompt reads "<site> wants to / Access other
+// apps and services on this device" with Block and Allow buttons, and the same permission
+// is the "Apps on device" row in the site's settings.
+const CHROME_PROMPT = 'Access other apps and services on this device'
+const CHROME_REALLOW =
+  'To allow it again, click the site icon at the left of Chrome’s address bar, choose Site settings, and set Apps on device to Allow.'
+
 const { entries } = useEntries()
 const { storage, available, serverActive, pendingCount, save } = useStorageBackend()
 
@@ -236,15 +243,26 @@ defineExpose({ reset, commit })
         <p class="status" role="status" data-testid="storage-status">{{ statusText }}</p>
       </div>
 
+      <p v-if="status.kind === 'waiting'" class="help" data-testid="storage-waiting-help">
+        Chrome is asking whether this site may “{{ CHROME_PROMPT }}”. Choose Allow to carry on.
+      </p>
+
       <div v-if="showHelp" class="help" data-testid="storage-help">
         <p v-if="status.kind === 'unauthorized'">
           The server answered, but not with this token. Check that it is the one your server
           expects.
         </p>
+        <p v-else-if="status.kind === 'blocked'">
+          Chrome is set to block this site from “{{ CHROME_PROMPT }}”. {{ CHROME_REALLOW }} Then
+          test again.
+        </p>
         <template v-else>
           <p>The page can’t tell these apart, so check each in turn:</p>
           <ul>
-            <li>Chrome’s permission for this site to reach your computer was refused.</li>
+            <li>
+              You chose Block when Chrome asked whether this site may “{{ CHROME_PROMPT }}”.
+              {{ CHROME_REALLOW }}
+            </li>
             <li>The server isn’t running.</li>
             <li>The address or port is wrong. The usual port is {{ DEFAULT_SERVER_PORT }}.</li>
             <li>This site’s address isn’t on the server’s list of allowed origins.</li>

@@ -245,7 +245,11 @@ describe('StorageSettings', () => {
       await press()
       const help = wrapper!.get('[data-testid="storage-help"]')
       expect(help.findAll('li')).toHaveLength(4)
-      expect(help.text()).toMatch(/permission/i)
+      // The refused-prompt cause quotes Chrome's own wording and says where to undo it.
+      expect(help.text()).toContain('You chose Block when Chrome asked')
+      expect(help.text()).toContain('“Access other apps and services on this device”')
+      expect(help.text()).toContain('Site settings')
+      expect(help.text()).toContain('Apps on device')
       expect(help.text()).toMatch(/isn’t running/i)
       expect(help.text()).toMatch(/port/i)
       expect(help.text()).toMatch(/allowed origins/i)
@@ -259,6 +263,12 @@ describe('StorageSettings', () => {
       await press()
       expect(statusText()).toBe('Blocked in Chrome’s site settings')
       expect(calls).toEqual([])
+      const help = wrapper!.get('[data-testid="storage-help"]').text()
+      expect(help).toContain('“Access other apps and services on this device”')
+      expect(help).toContain('click the site icon at the left of Chrome’s address bar')
+      expect(help).toContain('set Apps on device to Allow')
+      // The page can tell this one, so it doesn't list the four it can't.
+      expect(wrapper!.find('[data-testid="storage-help"] li').exists()).toBe(false)
     })
 
     it('says Blocked when the prompt is refused mid-request', async () => {
@@ -285,6 +295,9 @@ describe('StorageSettings', () => {
       await vi.advanceTimersByTimeAsync(0)
       await nextTick()
       expect(statusText()).toBe('Waiting for Chrome’s permission prompt')
+      expect(wrapper!.get('[data-testid="storage-waiting-help"]').text()).toContain(
+        '“Access other apps and services on this device”',
+      )
       expect(wrapper!.get('[data-testid="storage-test"]').attributes('disabled')).toBeDefined()
 
       await vi.advanceTimersByTimeAsync(10 * 60 * 1000)
