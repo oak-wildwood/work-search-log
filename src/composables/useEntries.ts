@@ -2,11 +2,8 @@ import { ref } from 'vue'
 import type { Entry, EntryDraft } from '../types'
 import { createSeedEntries } from '../lib/seedEntries'
 import { DEMO_DATA_ENABLED } from '../lib/demoMode'
-import {
-  LocalStorageEntryRepository,
-  isLaterTimestamp as isLater,
-  type EntryRepository,
-} from '../lib/entryRepository'
+import { isLaterTimestamp as isLater, type EntryRepository } from '../lib/entryRepository'
+import { createEntryRepository } from './useStorageBackend'
 
 function makeId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -158,8 +155,9 @@ export function createEntriesStore(repository: EntryRepository) {
 }
 
 // Module-level state: every component calling useEntries() shares one store,
-// with no need for provide/inject or a state-management library.
-const store = createEntriesStore(new LocalStorageEntryRepository())
+// with no need for provide/inject or a state-management library. The repository is
+// chosen once, here, so a backend change in Preferences applies on the next load.
+const store = createEntriesStore(createEntryRepository())
 
 export function useEntries() {
   return store

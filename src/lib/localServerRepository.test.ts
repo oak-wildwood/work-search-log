@@ -666,6 +666,18 @@ describe('testConnection', () => {
     expect(listener).toHaveBeenCalled()
   })
 
+  it('copies nothing when asked not to reconcile', async () => {
+    const server = installFakeServer()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('a')]))
+    const repo = make({ reconcileOnLoad: false })
+    expect(await repo.testConnection({ reconcile: false })).toEqual({ kind: 'connected' })
+    // A reconciliation would be queued by now and finish within a tick: the fake
+    // server answers at once. reconcile() itself can't be the barrier, since it pushes.
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(server.calls.map((c) => c.method)).toEqual(['GET'])
+    expect(server.entries.size).toBe(0)
+  })
+
   it('reports malformed for a 2xx that is not an Entry[]', async () => {
     const server = installFakeServer()
     const repo = make({ reconcileOnLoad: false })

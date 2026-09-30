@@ -12,6 +12,10 @@ export const PENDING_KEY = `work-search-log:pending:v1${STORAGE_SUFFIX}`
 const LOOPBACK_HOSTS = ['127.0.0.1', 'localhost', '[::1]']
 const DEFAULT_TIMEOUT_MS = 5000
 
+/** What the companion server listens on unless it is told otherwise. */
+export const DEFAULT_SERVER_PORT = 8765
+export const DEFAULT_SERVER_URL = `http://127.0.0.1:${DEFAULT_SERVER_PORT}`
+
 export type ConnectionResult =
   { kind: 'connected' } | { kind: 'unauthorized' } | { kind: 'unreachable' } | { kind: 'malformed' }
 
@@ -146,14 +150,18 @@ export class LocalServerRepository implements EntryRepository {
     }
   }
 
-  async testConnection(): Promise<ConnectionResult> {
+  /**
+   * `reconcile: false` probes without copying anything: reconciliation pushes every
+   * entry the server lacks, which a caller asking for consent first must not trigger.
+   */
+  async testConnection(options: { reconcile?: boolean } = {}): Promise<ConnectionResult> {
     // The only call allowed to raise the permission prompt, and so never timed out
     // while it may be open: aborting would report "unreachable" before it is read.
     const prompting = (await this.permission()) === 'prompt'
     const { result } = await this.fetchList(!prompting)
     // This is the call that gets the claimant to allow access, so whatever was
     // written while it was blocked goes now rather than at the next write.
-    if (result.kind === 'connected') void this.reconcile()
+    if (result.kind === 'connected' && (options.reconcile ?? true)) void this.reconcile()
     return result
   }
 
