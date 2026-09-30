@@ -27,33 +27,41 @@ export function createEntriesStore(repository: EntryRepository) {
   // even when the backend is async. `entries` itself updates synchronously; only
   // `saveError` waits for the adapter's result.
   let pending: Promise<unknown> = Promise.resolve()
+  // Whether `entries` is known to match what the repository holds. Always true
+  // with a synchronous read. An async adapter is not until hydration has applied
+  // (it is skipped if the claimant changes something first, and a failing list()
+  // never applies), and a whole-log write would then delete what the backend has
+  // and memory doesn't.
+  let hydrated = repository.loadSync !== undefined
   // After a failed write the repository may be missing entries that exist only in
   // memory. Writing just the next change would succeed, clear `saveError`, and
-  // leave them unsaved, so the next write saves the whole log instead and
-  // `saveError` clears only once that has succeeded.
+  // leave them unsaved, so once `hydrated` the next write saves the whole log
+  // instead. Until a whole-log write succeeds, `saveError` stays set.
   let needsResync = false
 
-  function persist(write: () => Promise<void>) {
-    pending = pending
-      .then(() => (needsResync ? repository.replaceAll(entries.value) : write()))
-      .then(
-        () => {
+  // Adapters get plain objects, never Vue's reactive proxies: structuredClone, for
+  // one, throws on those.
+  const snapshot = () => entries.value.map((entry) => ({ ...entry }))
+
+  function persist(write: () => Promise<void>, writesWholeLog = false) {
+    pending = pending.then(async () => {
+      const resync = needsResync && hydrated
+      try {
+        await (resync ? repository.replaceAll(snapshot()) : write())
+        if (resync || writesWholeLog) {
           needsResync = false
-          return false
-        },
-        () => {
-          needsResync = true
-          return true
-        },
-      )
-      .then((failed) => {
-        saveError.value = failed
-      })
+          hydrated = true
+        }
+      } catch {
+        needsResync = true
+      }
+      saveError.value = needsResync
+    })
   }
 
   // Written immediately so the seed behaves like real data — edits and removals
   // stick, and reloading doesn't regenerate a fresh batch mid-session.
-  if (seeded) persist(() => repository.replaceAll(entries.value))
+  if (seeded) persist(() => repository.replaceAll(snapshot()), true)
 
   // An adapter without a synchronous read hydrates once its list settles, unless
   // the claimant has already changed something in the meantime.
@@ -62,7 +70,10 @@ export function createEntriesStore(repository: EntryRepository) {
     repository
       .list()
       .then((stored) => {
-        if (entries.value === before) entries.value = stored
+        if (entries.value === before) {
+          entries.value = stored
+          hydrated = true
+        }
       })
       .catch(() => {})
   }
@@ -91,12 +102,12 @@ export function createEntriesStore(repository: EntryRepository) {
 
   function clearAll() {
     entries.value = []
-    persist(() => repository.replaceAll([]))
+    persist(() => repository.replaceAll([]), true)
   }
 
   function replaceAll(next: Entry[]) {
     entries.value = next
-    persist(() => repository.replaceAll(next))
+    persist(() => repository.replaceAll(next), true)
   }
 
   return {

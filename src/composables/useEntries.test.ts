@@ -185,6 +185,40 @@ describe('useEntries over an adapter with no synchronous read', () => {
     expect(await repository.list()).toHaveLength(2)
   })
 
+  it('never rewrites the whole repository after a failed write while unhydrated', async () => {
+    const repository = new InMemoryEntryRepository()
+    await repository.replaceAll([entryFor('stored')])
+    vi.spyOn(repository, 'put').mockRejectedValueOnce(new Error('offline'))
+    const store = createEntriesStore(repository)
+    store.addEntry({ ...draft, employer: 'Test Employer A' })
+    await vi.waitFor(() => expect(store.saveError.value).toBe(true))
+
+    store.addEntry({ ...draft, employer: 'Test Employer B' })
+    await flush()
+    const ids = (await repository.list()).map((e) => e.id)
+    expect(ids).toContain('stored')
+    expect(ids).toHaveLength(2)
+    expect(store.saveError.value).toBe(true)
+  })
+
+  it('resyncs the whole log after a failed write once it has hydrated', async () => {
+    const repository = new InMemoryEntryRepository()
+    await repository.replaceAll([entryFor('stored')])
+    const store = createEntriesStore(repository)
+    await vi.waitFor(() => expect(store.entries.value).toEqual([entryFor('stored')]))
+    vi.spyOn(repository, 'put').mockRejectedValueOnce(new Error('offline'))
+    store.addEntry({ ...draft, employer: 'Test Employer A' })
+    await vi.waitFor(() => expect(store.saveError.value).toBe(true))
+
+    store.addEntry({ ...draft, employer: 'Test Employer B' })
+    await vi.waitFor(() => expect(store.saveError.value).toBe(false))
+    expect((await repository.list()).map((e) => e.employer)).toEqual([
+      'Test Employer',
+      'Test Employer A',
+      'Test Employer B',
+    ])
+  })
+
   it('never seeds sample data over its contents, even in a demo build', async () => {
     vi.stubEnv('VITE_DEMO_DATA', '1')
     vi.resetModules()

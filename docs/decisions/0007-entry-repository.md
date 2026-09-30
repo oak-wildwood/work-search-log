@@ -22,10 +22,15 @@ their own over other adapters. Id generation and timestamps stay in the composab
 ref still updates synchronously; only persistence is async, and writes are chained so they reach
 the repository in order.
 
-**Failed writes.** The in-memory log is what the claimant sees, so after any failed write the next
+**Failed writes.** The in-memory log is what the claimant sees, so after a failed write the next
 write is a full `replaceAll(entries.value)` rather than a single-entry change, and `saveError`
 clears only once that succeeds. Without this, a later small write would succeed while an earlier
-entry stayed unsaved, and the warning would disappear.
+entry stayed unsaved, and the warning would disappear. A full write is only safe when memory
+matches what the repository holds: always for an adapter with `loadSync`, and for an async one
+once hydration has applied. Before that (hydration skipped because the claimant changed something
+first, or `list()` failing) a full write would delete what the backend has and memory lacks, so
+writes stay single-entry and `saveError` stays set until a whole-log write (clear all, import)
+succeeds.
 
 **Synchronous initial read.** The first render must already have the stored entries, and seeding
 depends on distinguishing "never stored" from "stored empty". So the interface has an optional
