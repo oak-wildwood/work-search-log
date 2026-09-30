@@ -53,6 +53,7 @@ export function parseLoopbackBase(raw: string): string {
 const STRING_FIELDS = [
   'id',
   'date',
+  'activityId',
   'activity',
   'siteAppliedOn',
   'jobType',
@@ -67,12 +68,15 @@ const STRING_FIELDS = [
   'updatedAt',
 ] as const
 
+// Only the id is required. A backup import accepts an entry with as little as an id,
+// a date and an activity, and one such entry must not turn the whole list "malformed"
+// and stall sync for good. Any known field that is present must still be a string.
 function isEntry(value: unknown): value is Entry {
   if (typeof value !== 'object' || value === null) return false
   const v = value as Record<string, unknown>
   return (
-    STRING_FIELDS.every((k) => typeof v[k] === 'string') &&
-    (v.activityId === undefined || typeof v.activityId === 'string')
+    typeof v.id === 'string' &&
+    STRING_FIELDS.every((k) => v[k] === undefined || typeof v[k] === 'string')
   )
 }
 
@@ -93,10 +97,12 @@ export class LocalServerRepository implements EntryRepository {
   private readonly pendingListeners = new Set<(count: number) => void>()
   // Network work runs one at a time, in the order it was asked for.
   private chain: Promise<unknown> = Promise.resolve()
-  // replaceAll calls whose server half hasn't completed. While any is outstanding,
-  // reconciliation won't pull server-only entries back in, or a "clear all" made
-  // while offline would undo itself.
-  private unsyncedReplaces = 0
+  // The operations (as `key`s) each replaceAll queued, for as long as any of them is
+  // still pending. While one is, reconciliation won't pull server-only entries in, so
+  // a "clear all" made while offline doesn't undo itself. It ends when the operations
+  // have been replayed, not when one particular request succeeds, so a failed attempt
+  // can't hold server-only entries back for the rest of the session.
+  private replaces: Set<string>[] = []
 
   constructor(options: LocalServerOptions) {
     if (DEMO_DATA_ENABLED) throw new Error('The local server is never used in a demo build')
@@ -141,10 +147,17 @@ export class LocalServerRepository implements EntryRepository {
     // The only call allowed to raise the permission prompt, and so never timed out
     // while it may be open: aborting would report "unreachable" before it is read.
     const prompting = (await this.permission()) === 'prompt'
-    return (await this.fetchList(!prompting)).result
+    const { result } = await this.fetchList(!prompting)
+    // This is the call that gets the claimant to allow access, so whatever was
+    // written while it was blocked goes now rather than at the next write.
+    if (result.kind === 'connected') void this.reconcile()
+    return result
   }
 
-  /** Replays pending operations and merges with the server. False if it couldn't. */
+  /**
+   * Replays pending operations and merges with the server. False if a call failed,
+   * though whatever the server holds still reaches the log.
+   */
   reconcile(): Promise<boolean> {
     return this.enqueue(() => this.reconcileNow())
   }
@@ -194,7 +207,7 @@ export class LocalServerRepository implements EntryRepository {
         .map((e): PendingOp => ({ op: 'remove', id: e.id, updatedAt: now })),
     ]
     this.setPending(ops)
-    this.unsyncedReplaces++
+    if (ops.length > 0) this.replaces.push(new Set(ops.map(key)))
     void this.enqueue(async () => {
       if (!(await this.networkAllowed())) return
       const { result, entries: server } = await this.fetchList(true)
@@ -208,7 +221,6 @@ export class LocalServerRepository implements EntryRepository {
         const res = await this.send('DELETE', entryPath(s.id))
         if (!res || !(res.ok || res.status === 404)) return
       }
-      this.unsyncedReplaces--
       await this.afterSuccess(ops)
     })
   }
@@ -300,6 +312,7 @@ export class LocalServerRepository implements EntryRepository {
     const push: Entry[] = []
     const remove: string[] = []
     const take: Entry[] = []
+    const serverOnly: Entry[] = []
 
     for (const id of new Set([...localById.keys(), ...serverById.keys()])) {
       const l = localById.get(id)
@@ -312,21 +325,29 @@ export class LocalServerRepository implements EntryRepository {
       } else if (l && !s) {
         push.push(l)
       } else if (!l && s) {
-        if (this.unsyncedReplaces === 0) take.push(s)
+        serverOnly.push(s)
       } else if (l && s) {
         if (isLaterTimestamp(s.updatedAt, l.updatedAt)) take.push(s)
         else if (isLaterTimestamp(l.updatedAt, s.updatedAt)) push.push(l)
       }
     }
 
+    // A failed call leaves its operations pending but must not keep what the server
+    // holds from reaching the log: one entry the server rejects would block every pull.
+    const unresolved = new Set<string>()
     if (push.length > 0) {
       const res = await this.send('POST', '/wsl/entries:bulk', { entries: push })
-      if (!res?.ok) return false
+      if (!res?.ok) for (const e of push) unresolved.add(e.id)
     }
-    for (const id of remove) {
+    for (const [index, id] of remove.entries()) {
       const res = await this.send('DELETE', entryPath(id))
-      if (!res || !(res.ok || res.status === 404)) return false
+      if (!res || !(res.ok || res.status === 404)) {
+        for (const rest of remove.slice(index)) unresolved.add(rest)
+        break
+      }
     }
+    const resolved = pending.filter((p) => !unresolved.has(p.id))
+    if (!this.replaceStillPending(new Set(resolved.map(key)))) take.push(...serverOnly)
 
     // Commit against the local log as it is now: the claimant may have written
     // while the network calls were in flight, and that must not be undone.
@@ -353,9 +374,15 @@ export class LocalServerRepository implements EntryRepository {
     } catch {
       return false
     }
-    this.clearPending(pending)
+    this.clearPending(resolved)
     for (const listener of [...this.reconciledListeners]) listener(merged.map((e) => ({ ...e })))
-    return true
+    return unresolved.size === 0
+  }
+
+  /** Whether a replaceAll still has an operation that `cleared` (as keys) won't remove. */
+  private replaceStillPending(cleared: Set<string>): boolean {
+    const live = this.readPending().filter((p) => !cleared.has(key(p)))
+    return this.replaces.some((replace) => live.some((p) => replace.has(key(p))))
   }
 
   // ---- pending queue ----
@@ -384,7 +411,10 @@ export class LocalServerRepository implements EntryRepository {
   /** Drops only operations that are still exactly what was sent. */
   private clearPending(done: PendingOp[]) {
     const sent = new Set(done.map(key))
-    this.writePending(this.readPending().filter((p) => !sent.has(key(p))))
+    const remaining = this.readPending().filter((p) => !sent.has(key(p)))
+    this.writePending(remaining)
+    const live = new Set(remaining.map(key))
+    this.replaces = this.replaces.filter((replace) => [...replace].some((k) => live.has(k)))
   }
 
   private writePending(ops: PendingOp[]) {

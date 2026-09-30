@@ -40,6 +40,8 @@ function installFakeServer() {
   const server = {
     entries: new Map<string, Entry>(),
     down: false,
+    rejectBulk: false,
+    rejectDelete: false,
     respond: null as null | (() => Response | Promise<Response>),
     calls: [] as Call[],
   }
@@ -56,6 +58,7 @@ function installFakeServer() {
       const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
       if (method === 'GET' && path === '/wsl/entries') return json([...server.entries.values()])
       if (method === 'POST' && path === '/wsl/entries:bulk') {
+        if (server.rejectBulk) return json({}, 400)
         for (const e of JSON.parse(init.body as string).entries as Entry[])
           server.entries.set(e.id, e)
         return json({})
@@ -66,11 +69,39 @@ function installFakeServer() {
         server.entries.set(id, e)
         return json(e)
       }
-      if (method === 'DELETE') return server.entries.delete(id) ? json({}) : json({}, 404)
+      if (method === 'DELETE') {
+        if (server.rejectDelete) return json({}, 500)
+        return server.entries.delete(id) ? json({}) : json({}, 404)
+      }
       return json({}, 405)
     }),
   )
   return server
+}
+
+/**
+ * Holds every bulk POST until released, so a test can act while a reconciliation is
+ * in flight. Call after installFakeServer. `offline` makes later requests fail.
+ */
+function holdBulk() {
+  const realFetch = globalThis.fetch as unknown as (
+    input: string,
+    init?: RequestInit,
+  ) => Promise<Response>
+  const hold = { reached: false, offline: false, release: () => {} }
+  const gate = new Promise<void>((resolve) => (hold.release = resolve))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: string, init: RequestInit = {}) => {
+      if (hold.offline) throw new TypeError('Failed to fetch')
+      if (init.method === 'POST') {
+        hold.reached = true
+        await gate
+      }
+      return realFetch(input, init)
+    }),
+  )
+  return hold
 }
 
 function stubPermission(state: string | Error) {
@@ -122,6 +153,7 @@ describe('loopback only', () => {
   it.each([
     'http://127.0.0.1@example.com',
     'http://user:pw@127.0.0.1',
+    'http://user@127.0.0.1',
     'http://localhost.example.com',
     'http://127.0.0.1.example.com',
     'http://localhost.',
@@ -234,7 +266,12 @@ describe('unreachable is not empty', () => {
     ['500', () => new Response('', { status: 500 })],
     ['malformed body', () => new Response('{"not":"a list"}', { status: 200 })],
     ['non-JSON body', () => new Response('<html>', { status: 200 })],
-    ['entries missing fields', () => new Response('[{"id":"x"}]', { status: 200 })],
+    ['an entry with no id', () => new Response('[{"notes":"x"}]', { status: 200 })],
+    [
+      'an entry with a non-string field',
+      () => new Response('[{"id":"x","notes":5}]', { status: 200 }),
+    ],
+    ['an entry that is not an object', () => new Response('["x"]', { status: 200 })],
   ])('never deletes local entries on %s at load', async (_name, make_) => {
     const server = installFakeServer()
     const body = make_()
@@ -366,6 +403,115 @@ describe('reconciliation', () => {
         .sort(),
     ).toEqual(['put:y', 'remove:x'])
   })
+
+  it('accepts an entry with only an id, date and activity, as a backup import allows', async () => {
+    const server = installFakeServer()
+    server.entries.set('srv', makeEntry('srv'))
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([{ id: 'sparse', date: '2000-01-03', activity: 'Test activity' }]),
+    )
+    const repo = make({ reconcileOnLoad: false })
+    expect(await repo.reconcile()).toBe(true)
+    expect(server.entries.has('sparse')).toBe(true)
+    expect(await repo.reconcile()).toBe(true)
+    expect(await repo.testConnection()).toEqual({ kind: 'connected' })
+  })
+
+  it('still brings server entries in when the server rejects a push, and keeps it pending', async () => {
+    const server = installFakeServer()
+    server.down = true
+    const repo = make({ reconcileOnLoad: false })
+    await repo.put(makeEntry('mine'))
+    await settle(repo)
+    server.down = false
+    server.rejectBulk = true
+    server.entries.set('srv', makeEntry('srv'))
+    const listener = vi.fn()
+    repo.onReconciled(listener)
+    expect(await repo.reconcile()).toBe(false)
+    expect(localIds()).toEqual(['mine', 'srv'])
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(pending()).toEqual([{ op: 'put', id: 'mine', updatedAt: '2000-01-04T00:00:00.000Z' }])
+    server.rejectBulk = false
+    expect(await repo.reconcile()).toBe(true)
+    expect(server.entries.has('mine')).toBe(true)
+    expect(repo.pendingCount()).toBe(0)
+  })
+
+  it('does not bring back an entry removed while a reconciliation is in flight', async () => {
+    const server = installFakeServer()
+    server.entries.set('a', makeEntry('a', { updatedAt: '2000-05-01T00:00:00.000Z' }))
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([makeEntry('a', { updatedAt: '2000-04-01T00:00:00.000Z' }), makeEntry('b')]),
+    )
+    const hold = holdBulk()
+    const repo = make({ reconcileOnLoad: false })
+    const done = repo.reconcile()
+    await vi.waitFor(() => expect(hold.reached).toBe(true))
+    await repo.remove('a')
+    hold.release()
+    expect(await done).toBe(true)
+    expect(localIds()).toEqual(['b'])
+    await settle(repo)
+    expect(server.entries.has('a')).toBe(false)
+  })
+
+  it('keeps a change made while an earlier one was in flight pending', async () => {
+    const server = installFakeServer()
+    server.down = true
+    const repo = make({ reconcileOnLoad: false })
+    await repo.put(makeEntry('x', { updatedAt: '2000-01-05T00:00:00.000Z' }))
+    await settle(repo)
+    server.down = false
+    const hold = holdBulk()
+    const done = repo.reconcile()
+    await vi.waitFor(() => expect(hold.reached).toBe(true))
+    hold.offline = true
+    await repo.put(makeEntry('x', { notes: 'edited', updatedAt: '2000-01-06T00:00:00.000Z' }))
+    hold.release()
+    expect(await done).toBe(true)
+    await settle(repo)
+    expect(pending()).toEqual([{ op: 'put', id: 'x', updatedAt: '2000-01-06T00:00:00.000Z' }])
+  })
+
+  describe('a replaceAll made while offline', () => {
+    function offlineClearAll() {
+      const server = installFakeServer()
+      server.entries.set('x', makeEntry('x'))
+      server.entries.set('u', makeEntry('u'))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('x')]))
+      const repo = make({ reconcileOnLoad: false })
+      return { server, repo }
+    }
+
+    it('does not pull server-only entries back in while its operations are unsent', async () => {
+      const { server, repo } = offlineClearAll()
+      server.down = true
+      await repo.replaceAll([])
+      await settle(repo)
+      server.down = false
+      server.rejectDelete = true
+      expect(await repo.reconcile()).toBe(false)
+      expect(localIds()).toEqual([])
+      expect(pending().map((p: { id: string }) => p.id)).toEqual(['x'])
+    })
+
+    it('lets server-only entries reach the app once its operations have replayed', async () => {
+      const { server, repo } = offlineClearAll()
+      server.down = true
+      await repo.replaceAll([])
+      await settle(repo)
+      server.down = false
+      const listener = vi.fn()
+      repo.onReconciled(listener)
+      expect(await repo.reconcile()).toBe(true)
+      expect(server.entries.has('x')).toBe(false)
+      expect(localIds()).toEqual(['u'])
+      expect(listener).toHaveBeenLastCalledWith([expect.objectContaining({ id: 'u' })])
+    })
+  })
 })
 
 describe('testConnection', () => {
@@ -399,6 +545,30 @@ describe('testConnection', () => {
     server.down = false
     server.respond = () => new Response('', { status: 503 })
     expect(await repo.testConnection()).toEqual({ kind: 'unreachable' })
+  })
+
+  it('replays what was written while prompting once it connects', async () => {
+    let state = 'prompt'
+    vi.stubGlobal('navigator', { permissions: { query: async () => ({ state }) } })
+    const server = installFakeServer()
+    const repo = make({ reconcileOnLoad: false })
+    const listener = vi.fn()
+    repo.onReconciled(listener)
+    await repo.put(makeEntry('a'))
+    await settle(repo)
+    expect(server.calls).toEqual([])
+    server.entries.set('s', makeEntry('s'))
+    // The claimant answers the prompt while the request is waiting.
+    server.respond = () => {
+      state = 'granted'
+      server.respond = null
+      return new Response('[]', { status: 200 })
+    }
+    expect(await repo.testConnection()).toEqual({ kind: 'connected' })
+    await vi.waitFor(() => expect(repo.pendingCount()).toBe(0))
+    expect(server.entries.has('a')).toBe(true)
+    expect(localIds()).toEqual(['a', 's'])
+    expect(listener).toHaveBeenCalled()
   })
 
   it('reports malformed for a 2xx that is not an Entry[]', async () => {
