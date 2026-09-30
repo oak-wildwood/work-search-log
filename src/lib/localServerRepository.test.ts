@@ -139,6 +139,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
   vi.useRealTimers()
   vi.unstubAllEnvs()
+  vi.restoreAllMocks()
 })
 
 describeEntryRepositoryContract('LocalServerRepository', () => {
@@ -266,6 +267,37 @@ describe('local first', () => {
     })
     await expect(make({ reconcileOnLoad: false }).put(makeEntry('a'))).rejects.toThrow()
     vi.restoreAllMocks()
+  })
+
+  describe('when the pending queue cannot be stored', () => {
+    const actions: [string, string, (repo: LocalServerRepository) => Promise<void>][] = [
+      ['put', 'PUT', (repo) => repo.put(makeEntry('a'))],
+      ['remove', 'DELETE', (repo) => repo.remove('a')],
+      ['replaceAll', 'POST', (repo) => repo.replaceAll([makeEntry('a')])],
+    ]
+
+    it.each(actions)(
+      'rejects %s, reports no count, and still sends it',
+      async (_name, method, act) => {
+        const server = installFakeServer()
+        const setItem = Storage.prototype.setItem
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+          this: Storage,
+          name: string,
+          value: string,
+        ) {
+          if (name === PENDING_KEY) throw new Error('quota')
+          setItem.call(this, name, value)
+        })
+        const repo = make({ reconcileOnLoad: false })
+        const counts: number[] = []
+        repo.onPendingChange((n) => counts.push(n))
+        await expect(act(repo)).rejects.toThrow(/queue/)
+        await settle(repo)
+        expect(server.calls.some((c) => c.method === method)).toBe(true)
+        expect(counts).toEqual([])
+      },
+    )
   })
 })
 
@@ -425,6 +457,46 @@ describe('reconciliation', () => {
         .map((p: { op: string; id: string }) => `${p.op}:${p.id}`)
         .sort(),
     ).toEqual(['put:y', 'remove:x'])
+  })
+
+  it('treats an entry with no updatedAt as older than one that has it, on either side', async () => {
+    const server = installFakeServer()
+    server.entries.set('x', { id: 'x', date: '2000-01-03', activity: 'Test activity' } as Entry)
+    server.entries.set('y', makeEntry('y', { notes: 'server' }))
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        makeEntry('x', { notes: 'local' }),
+        { id: 'y', date: '2000-01-03', activity: 'Test activity' },
+      ]),
+    )
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(server.entries.get('x')).toMatchObject({ notes: 'local' })
+    const local: Entry[] = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
+    expect(local.find((e) => e.id === 'y')?.notes).toBe('server')
+  })
+
+  it('queues and replays an offline import of an entry that has no updatedAt', async () => {
+    const server = installFakeServer()
+    server.entries.set('a', makeEntry('a', { notes: 'server' }))
+    const repo = make({ reconcileOnLoad: false })
+    server.down = true
+    const sparse = { id: 'a', date: '2000-01-03', activity: 'Test activity' } as Entry
+    await repo.replaceAll([sparse])
+    await settle(repo)
+    expect(repo.pendingCount()).toBe(1)
+    server.down = false
+    expect(await repo.reconcile()).toBe(true)
+    expect(server.entries.get('a')).toEqual(sparse)
+    expect(repo.pendingCount()).toBe(0)
+  })
+
+  it('queues a put for an entry that has no updatedAt', async () => {
+    const server = installFakeServer()
+    server.down = true
+    const repo = make({ reconcileOnLoad: false })
+    await repo.put({ id: 'p', date: '2000-01-03', activity: 'Test activity' } as Entry)
+    expect(pending()).toEqual([{ op: 'put', id: 'p', updatedAt: expect.any(String) }])
   })
 
   it('accepts an entry with only an id, date and activity, as a backup import allows', async () => {

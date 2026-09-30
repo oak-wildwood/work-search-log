@@ -178,24 +178,30 @@ export class LocalServerRepository implements EntryRepository {
       next[index] = entry
       return next
     })
-    const op: PendingOp = { op: 'put', id: entry.id, updatedAt: entry.updatedAt }
-    this.setPending([op])
+    const op: PendingOp = {
+      op: 'put',
+      id: entry.id,
+      updatedAt: stampOf(entry, new Date().toISOString()),
+    }
+    const queued = this.setPending([op])
     void this.enqueue(async () => {
       if (!(await this.networkAllowed())) return
       const res = await this.send('PUT', entryPath(entry.id), entry)
       if (res?.ok) await this.afterSuccess([op])
     })
+    if (!queued) throw new Error(QUEUE_FAILED)
   }
 
   async remove(id: string): Promise<void> {
     await this.mutateLocal((all) => all.filter((e) => e.id !== id))
     const op: PendingOp = { op: 'remove', id, updatedAt: new Date().toISOString() }
-    this.setPending([op])
+    const queued = this.setPending([op])
     void this.enqueue(async () => {
       if (!(await this.networkAllowed())) return
       const res = await this.send('DELETE', entryPath(id))
       if (res && (res.ok || res.status === 404)) await this.afterSuccess([op])
     })
+    if (!queued) throw new Error(QUEUE_FAILED)
   }
 
   async replaceAll(entries: Entry[]): Promise<void> {
@@ -204,12 +210,12 @@ export class LocalServerRepository implements EntryRepository {
     const keep = new Set(entries.map((e) => e.id))
     const now = new Date().toISOString()
     const ops: PendingOp[] = [
-      ...entries.map((e): PendingOp => ({ op: 'put', id: e.id, updatedAt: e.updatedAt })),
+      ...entries.map((e): PendingOp => ({ op: 'put', id: e.id, updatedAt: stampOf(e, now) })),
       ...before
         .filter((e) => !keep.has(e.id))
         .map((e): PendingOp => ({ op: 'remove', id: e.id, updatedAt: now })),
     ]
-    this.setPending(ops)
+    const queued = this.setPending(ops)
     if (ops.length > 0) this.replaces.push(new Set(ops.map(key)))
     void this.enqueue(async () => {
       if (!(await this.networkAllowed())) return
@@ -226,6 +232,7 @@ export class LocalServerRepository implements EntryRepository {
       }
       await this.afterSuccess(ops)
     })
+    if (!queued) throw new Error(QUEUE_FAILED)
   }
 
   // ---- internals ----
@@ -345,8 +352,12 @@ export class LocalServerRepository implements EntryRepository {
       } else if (!l && s) {
         serverOnly.push(s)
       } else if (l && s) {
-        if (isLaterTimestamp(s.updatedAt, l.updatedAt)) take.push(s)
-        else if (isLaterTimestamp(l.updatedAt, s.updatedAt)) push.push(l)
+        // An entry with no updatedAt (a backup import allows one) is as new as its
+        // pending put, or oldest of all when there is none.
+        const localStamp = stampOf(l, p?.updatedAt ?? '')
+        const serverStamp = stampOf(s, '')
+        if (isLaterTimestamp(serverStamp, localStamp)) take.push(s)
+        else if (isLaterTimestamp(localStamp, serverStamp)) push.push(l)
       }
     }
 
@@ -419,28 +430,33 @@ export class LocalServerRepository implements EntryRepository {
       : []
   }
 
-  /** The latest operation for an id replaces any earlier one. */
-  private setPending(ops: PendingOp[]) {
+  /** The latest operation for an id replaces any earlier one. False if it couldn't be stored. */
+  private setPending(ops: PendingOp[]): boolean {
     const byId = new Map(this.readPending().map((p) => [p.id, p]))
     for (const op of ops) byId.set(op.id, op)
-    this.writePending([...byId.values()])
+    return this.writePending([...byId.values()])
   }
 
   /** Drops only operations that are still exactly what was sent. */
   private clearPending(done: PendingOp[]) {
     const sent = new Set(done.map(key))
-    const remaining = this.readPending().filter((p) => !sent.has(key(p)))
-    this.writePending(remaining)
-    const live = new Set(remaining.map(key))
+    this.writePending(this.readPending().filter((p) => !sent.has(key(p))))
+    const live = new Set(this.readPending().map(key))
     this.replaces = this.replaces.filter((replace) => [...replace].some((k) => live.has(k)))
   }
 
-  private writePending(ops: PendingOp[]) {
+  /** Listeners hear only about a count that was actually stored. */
+  private writePending(ops: PendingOp[]): boolean {
     const before = this.pendingCount()
-    writeJSON(PENDING_KEY, ops)
+    if (!writeJSON(PENDING_KEY, ops)) return false
     if (ops.length !== before) for (const l of [...this.pendingListeners]) l(ops.length)
+    return true
   }
 }
 
+const QUEUE_FAILED = 'Could not queue the change for the local server'
 const key = (p: PendingOp) => `${p.op}\u0000${p.id}\u0000${p.updatedAt}`
+/** The entry's updatedAt, or `fallback` for an imported entry that has none. */
+const stampOf = (entry: Entry, fallback: string): string =>
+  typeof entry.updatedAt === 'string' ? entry.updatedAt : fallback
 const entryPath = (id: string) => `/wsl/entries/${encodeURIComponent(id)}`
