@@ -13,3 +13,4 @@ growing sections, that's usually a sign it's actually two decisions.
 4. [No autofill, no compliance claims](./0004-no-autofill-no-compliance-claims.md)
 5. [Effective-dated requirement schedule](./0005-effective-dated-requirements.md)
 6. [Agent instructions in one file, with procedure in a skill](./0006-agent-instructions-layering.md)
+7. [Entry storage behind an EntryRepository interface](./0007-entry-repository.md)
