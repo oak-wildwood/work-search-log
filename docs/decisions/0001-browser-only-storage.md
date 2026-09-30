@@ -1,5 +1,9 @@
 # 1. No backend, no accounts, browser storage only
 
+**Status:** amended by [ADR 0008](./0008-optional-local-server-storage.md). The default below still
+holds: no network call by default. An opt-in backend may talk to loopback addresses only, so nothing
+leaves the claimant's machine.
+
 ## Context
 
 This tool exists to produce a work-search record a claimant can hand to a state unemployment

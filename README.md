@@ -7,8 +7,10 @@ week of their benefit year.
 <img width="2516" height="2378" alt="2026-09-02 at 2 06 AM" src="https://github.com/user-attachments/assets/33d3b3e1-2871-4b6f-b593-a8450ebabd94" />
 
 Everything is entered by hand, grouped by week with a "did I hit my required number of activities
-this week" indicator, and exportable as CSV or a JSON backup. There is no server and no account —
-your data lives only in your browser's local storage, on your machine.
+this week" indicator, and exportable as CSV or a JSON backup. There is no account, and by default
+no server — your data lives only in your browser's local storage, on your machine. An optional
+setting can also keep a second copy on a small server running on that same computer (see
+[below](#optional-keep-a-copy-on-a-local-server)).
 
 > Not affiliated with or endorsed by any state workforce agency. It's a personal record-keeping
 > tool shaped by the kind of work-search log those agencies typically require, not an official
@@ -26,7 +28,10 @@ your data lives only in your browser's local storage, on your machine.
   up before you clear browser data, switch devices, or reinstall
 - Print / save-as-PDF view
 - Light and dark themes, responsive down to phone width
-- Nothing leaves your browser: no accounts, no network calls, no analytics
+- Optional second copy on a local server, for Chrome: off by default, and it only ever talks to your
+  own computer
+- Nothing leaves your browser by default: no accounts, no analytics, and no network calls unless you
+  turn on the local server, which can only reach addresses on your own machine
 
 ## Running it yourself
 
@@ -76,6 +81,38 @@ in Vercel and previews start appearing on PRs; ignore it and nothing changes. Gi
 the production deploy either way, which is what `deploymentEnabled.main: false` in that file is
 for.
 
+## Optional: keep a copy on a local server
+
+By default the log lives only in your browser, so clearing site data loses it. **Preferences →
+Storage → Local server** adds a second copy in a small service you run on your own computer. It is
+off unless you turn it on, it works in Chrome, and your entries stay in the browser either way.
+
+- **Only your own computer.** The address must be `127.0.0.1`, `localhost` or `[::1]`; anything else
+  is refused in the form and again in the code, and requests never follow a redirect. The usual port
+  is 8765.
+- **Nothing is sent until you press Test connection.** Not on load, not on a timer, not when you save.
+  The token you enter is kept in this browser only, and never appears in the JSON backup, the CSV or
+  the printed sheet.
+- **Turning it on copies your log** to the server after you confirm. Nothing is deleted from the
+  browser. The change applies the next time you open the app.
+- **Turning it off** goes back to browser storage, leaves whatever is on the server alone, and forgets
+  the token.
+- **A server that is down never stops you logging.** The entry is saved in the browser and the
+  settings panel shows how many changes are waiting.
+
+Chrome asks you once, per site, to allow a public page to reach an address on your own computer, and
+holds the first request until you answer.
+<!-- TODO(chrome-wording): paste Chrome's exact prompt wording and the site-settings path for
+re-allowing it, copied from the browser (issue #53, item 5). -->
+
+If the test doesn't say **Connected**, the page can't tell these apart, so check each in turn: the
+permission was refused, the server isn't running, the port or address is wrong, or this site's address
+isn't on the server's list of allowed origins.
+
+On GitHub Pages every project site under one account shares an origin, and so shares the browser
+storage the token sits in. See [ADR 0008](./docs/decisions/0008-optional-local-server-storage.md) for
+that trust boundary and the rest of the design.
+
 ## Adapting it for your state
 
 Everything state-specific lives in a JSON file under `src/config/states/` — activity types and how
@@ -104,8 +141,9 @@ it changes mid-claim, weeks you already logged are still scored against the numb
 then.
 
 On first run a short setup step asks your name, your state, and that weekly number. It's reachable
-afterwards from **Preferences** in the header. Nothing is sent anywhere, and the app never asks for
-a Social Security number — a browser-only app has nowhere safe to keep one.
+afterwards from **Preferences** in the header. Nothing is sent anywhere unless you turn on the local
+server, and the app never asks for a Social Security number — a browser-only app has nowhere safe to
+keep one.
 
 ## Using an AI coding agent
 
