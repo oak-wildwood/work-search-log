@@ -54,3 +54,61 @@ describe('useEntries seeding', () => {
     expect(entries.value.length).toBeGreaterThan(0)
   })
 })
+
+describe('useEntries persistence', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.stubEnv('DEV', false)
+    vi.stubEnv('VITE_DEMO_DATA', undefined)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  const draft = {
+    date: '2000-01-03',
+    activity: 'Test activity',
+    siteAppliedOn: '',
+    jobType: '',
+    employer: 'Test Employer',
+    address: '',
+    phone: '',
+    contactName: '',
+    contactMethod: '',
+    result: '',
+    notes: '',
+  }
+  const stored = () => JSON.parse(localStorage.getItem(`work-search-log:entries:v1`) ?? 'null')
+
+  it('persists add, update, remove and replace, updating the ref synchronously', async () => {
+    const store = await loadEntries()
+    store.addEntry(draft)
+    expect(store.entries.value).toHaveLength(1)
+    const id = store.entries.value[0].id
+    store.updateEntry(id, { ...draft, notes: 'changed' })
+    store.updateEntry('missing', draft)
+    await vi.waitFor(() => expect(stored()[0].notes).toBe('changed'))
+    expect(stored()).toHaveLength(1)
+    store.removeEntry(id)
+    await vi.waitFor(() => expect(stored()).toEqual([]))
+    store.replaceAll([
+      { ...store.entries.value[0], ...draft, id: 'x', createdAt: '', updatedAt: '' },
+    ])
+    await vi.waitFor(() => expect(stored()).toHaveLength(1))
+    store.clearAll()
+    await vi.waitFor(() => expect(stored()).toEqual([]))
+    expect(store.saveError.value).toBe(false)
+  })
+
+  it('sets saveError once a write fails', async () => {
+    const store = await loadEntries()
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota')
+    })
+    store.addEntry(draft)
+    expect(store.entries.value).toHaveLength(1)
+    await vi.waitFor(() => expect(store.saveError.value).toBe(true))
+  })
+})
