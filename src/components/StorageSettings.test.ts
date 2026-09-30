@@ -140,6 +140,11 @@ describe('StorageSettings', () => {
         await press()
         expect(calls).toEqual([])
         expect(await exposed().commit()).toBe(false)
+        await nextTick()
+        // Says what is wrong with the address, not merely that a test is missing.
+        expect(wrapper!.get('[data-testid="storage-error"]').text()).toBe(
+          wrapper!.get('[data-testid="storage-url-error"]').text(),
+        )
         expect(saved()).toBeNull()
       },
     )
