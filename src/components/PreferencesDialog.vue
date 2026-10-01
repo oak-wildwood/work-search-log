@@ -2,11 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useModalDialog } from '../composables/useModalDialog'
 import { useSettings } from '../composables/useSettings'
+import { useStorageBackend } from '../composables/useStorageBackend'
 import { useTheme } from '../composables/useTheme'
 import { getStateConfig, listStateConfigs } from '../config'
 import { noAutofillAttrs } from '../lib/noAutofill'
 import { resolveRequirement } from '../lib/requirements'
 import { currentWeekKey } from '../lib/weeks'
+import StorageSettings from './StorageSettings.vue'
 
 const props = defineProps<{
   open: boolean
@@ -19,8 +21,10 @@ const emit = defineEmits<{ close: [] }>()
 const { settings, schedule, setWeeklyRequirement, setStateCode, setName, markOnboarded } =
   useSettings()
 const { isDark, toggleTheme } = useTheme()
+const { storage } = useStorageBackend()
 
 const states = listStateConfigs()
+const storageSettings = ref<InstanceType<typeof StorageSettings> | null>(null)
 
 // Edited locally and only committed on save, so dismissing leaves nothing behind.
 const draftName = ref('')
@@ -50,6 +54,7 @@ function reset() {
   draftName.value = settings.value.name
   draftState.value = settings.value.stateCode ?? ''
   enteredCount.value = resolveRequirement(schedule.value, weekKey.value)?.total ?? null
+  storageSettings.value?.reset()
 }
 
 const dialogEl = ref<HTMLDialogElement | null>(null)
@@ -105,7 +110,10 @@ const countHint = computed(() => {
   return 'Your determination letter has this number. Leave it blank if you don’t have it yet.'
 })
 
-function save() {
+async function save() {
+  // First, so a server that can't be turned on leaves every other draft untouched.
+  // The section isn't rendered on a first run, and then there is nothing to commit.
+  if (storageSettings.value && !(await storageSettings.value.commit())) return
   setName(draftName.value)
   setStateCode(draftState.value || null)
   const count =
@@ -196,10 +204,16 @@ function dismiss() {
         </button>
       </div>
 
+      <StorageSettings v-if="!firstRun" ref="storageSettings" />
+
       <p class="privacy">
-        Kept in this browser only — nothing is sent anywhere. Your name is the only personal detail
-        stored. A claim number or Social Security number is never stored or asked for; the printed
-        copy leaves a blank line for you to fill in by hand.
+        <template v-if="storage.backend === 'local-server'">
+          Kept in this browser, with a second copy on the local server you chose, which has to be on
+          this computer. Nothing leaves it.
+        </template>
+        <template v-else>Kept in this browser only — nothing is sent anywhere.</template>
+        Your name is the only personal detail stored. A claim number or Social Security number is
+        never stored or asked for; the printed copy leaves a blank line for you to fill in by hand.
       </p>
 
       <div class="actions">

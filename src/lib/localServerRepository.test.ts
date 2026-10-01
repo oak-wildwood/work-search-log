@@ -182,7 +182,7 @@ describe('loopback only', () => {
     await repo.put(makeEntry('a'))
     await repo.remove('a')
     await repo.replaceAll([makeEntry('b')])
-    await repo.list()
+    await repo.reconcile()
     await repo.testConnection()
     expect(server.calls.length).toBeGreaterThan(4)
     for (const call of server.calls) expect(call.init.redirect).toBe('error')
@@ -249,6 +249,34 @@ describe('local first', () => {
     await repo.reconcile()
     expect(server.entries.has('a')).toBe(false)
     expect(localIds()).toEqual([])
+  })
+
+  it('replays a pending remove even when the server holds a newer copy', async () => {
+    const server = installFakeServer()
+    server.entries.set('a', makeEntry('a', { updatedAt: '2999-01-01T00:00:00.000Z' }))
+    localStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify([{ op: 'remove', id: 'a', updatedAt: '2000-01-05T00:00:00.000Z' }]),
+    )
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(server.entries.has('a')).toBe(false)
+    expect(localIds()).toEqual([])
+  })
+
+  it('replays a pending edit even when the server holds a newer copy', async () => {
+    const server = installFakeServer()
+    server.entries.set(
+      'a',
+      makeEntry('a', { notes: 'server', updatedAt: '2999-01-01T00:00:00.000Z' }),
+    )
+    server.down = true
+    const repo = make({ reconcileOnLoad: false })
+    await repo.put(makeEntry('a', { notes: 'edited offline' }))
+    await settle(repo)
+    server.down = false
+    expect(await repo.reconcile()).toBe(true)
+    expect(server.entries.get('a')?.notes).toBe('edited offline')
+    expect(repo.pendingCount()).toBe(0)
   })
 
   it('treats a 404 on delete as success', async () => {
@@ -320,12 +348,9 @@ describe('unreachable is not empty', () => {
     else server.down = true
     localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('a'), makeEntry('b')]))
     const repo = make()
-    const listener = vi.fn()
-    repo.onReconciled(listener)
     expect(await repo.reconcile()).toBe(false)
     expect(localIds()).toEqual(['a', 'b'])
     expect((await repo.list()).map((e) => e.id).sort()).toEqual(['a', 'b'])
-    expect(listener).not.toHaveBeenCalled()
   })
 
   it('times out a hung request and keeps the write pending', async () => {
@@ -381,55 +406,79 @@ describe('reconciliation', () => {
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)[0].notes).toBe('local')
   })
 
-  it('later updatedAt wins when both sides changed: server later', async () => {
+  it('never writes to the log, whatever the server holds', async () => {
     const server = installFakeServer()
     server.entries.set(
       'a',
-      makeEntry('a', { notes: 'server', updatedAt: '2000-05-01T00:00:00.000Z' }),
+      makeEntry('a', { notes: 'server', updatedAt: '2999-01-01T00:00:00.000Z' }),
     )
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify([makeEntry('a', { notes: 'local', updatedAt: '2000-04-01T00:00:00.000Z' })]),
-    )
-    const repo = make({ reconcileOnLoad: false })
-    const listener = vi.fn()
-    repo.onReconciled(listener)
-    server.down = true
-    await repo.put(makeEntry('a', { notes: 'local', updatedAt: '2000-04-01T00:00:00.000Z' }))
+    server.entries.set('server-only', makeEntry('server-only'))
+    const stored = JSON.stringify([makeEntry('a', { notes: 'local' }), makeEntry('b')])
+    localStorage.setItem(STORAGE_KEY, stored)
+    const repo = make()
     await settle(repo)
-    server.down = false
-    await repo.reconcile()
+    expect(await repo.reconcile()).toBe(true)
+    expect(await repo.testConnection()).toEqual({ kind: 'connected' })
+    await settle(repo)
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(stored)
     expect(server.entries.get('a')?.notes).toBe('server')
-    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)[0].notes).toBe('server')
-    expect(listener).toHaveBeenLastCalledWith([expect.objectContaining({ notes: 'server' })])
+    expect(server.entries.has('b')).toBe(true)
   })
 
-  it('brings server-only entries into local storage and tells listeners, on load', async () => {
+  it('never restores an empty log from the server, on load', async () => {
     const server = installFakeServer()
     server.entries.set('s', makeEntry('s'))
-    const repo = make()
-    const listener = vi.fn()
-    repo.onReconciled(listener)
-    await settle(repo)
-    expect(localIds()).toEqual(['s'])
-    expect(listener).toHaveBeenCalledWith([expect.objectContaining({ id: 's' })])
+    await settle(make())
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
+    expect(server.entries.has('s')).toBe(true)
   })
 
-  it('tells listeners after a pending replay, and stops after unsubscribe', async () => {
+  it('leaves an entry only the server has on the server, rather than adding it to the log', async () => {
     const server = installFakeServer()
-    server.down = true
-    const repo = make({ reconcileOnLoad: false })
-    const listener = vi.fn()
-    const off = repo.onReconciled(listener)
-    await repo.put(makeEntry('a'))
-    await settle(repo)
-    expect(listener).not.toHaveBeenCalled()
-    server.down = false
-    await repo.reconcile()
-    expect(listener).toHaveBeenCalledTimes(1)
-    off()
-    await repo.reconcile()
-    expect(listener).toHaveBeenCalledTimes(1)
+    server.entries.set('kept', makeEntry('kept'))
+    server.entries.set('removed', makeEntry('removed'))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('kept')]))
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(localIds()).toEqual(['kept'])
+    expect([...server.entries.keys()].sort()).toEqual(['kept', 'removed'])
+  })
+
+  it('does not add back an entry removed while the setting was off, despite its stale put', async () => {
+    const server = installFakeServer()
+    server.entries.set('removed', makeEntry('removed'))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('kept')]))
+    localStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify([{ op: 'put', id: 'removed', updatedAt: '2000-01-04T00:00:00.000Z' }]),
+    )
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(localIds()).toEqual(['kept'])
+    expect(server.entries.has('removed')).toBe(true)
+    expect(pending()).toEqual([])
+  })
+
+  it('sends no delete for a pending remove the server has nothing for', async () => {
+    const server = installFakeServer()
+    localStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify([{ op: 'remove', id: 'gone', updatedAt: '2000-01-05T00:00:00.000Z' }]),
+    )
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(server.calls.map((call) => call.method)).toEqual(['GET'])
+    expect(pending()).toEqual([])
+  })
+
+  it('does not delete from the server an entry the log still has, despite a stale remove', async () => {
+    const server = installFakeServer()
+    server.entries.set('a', makeEntry('a'))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('a')]))
+    localStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify([{ op: 'remove', id: 'a', updatedAt: '2000-01-05T00:00:00.000Z' }]),
+    )
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(server.entries.has('a')).toBe(true)
+    expect(pending()).toEqual([])
   })
 
   it('replaceAll bulk-upserts and deletes server ids absent from the new set', async () => {
@@ -459,7 +508,7 @@ describe('reconciliation', () => {
     ).toEqual(['put:y', 'remove:x'])
   })
 
-  it('treats an entry with no updatedAt as older than one that has it, on either side', async () => {
+  it('pushes a dated entry over an undated server copy, and never takes the server copy back', async () => {
     const server = installFakeServer()
     server.entries.set('x', { id: 'x', date: '2000-01-03', activity: 'Test activity' } as Entry)
     server.entries.set('y', makeEntry('y', { notes: 'server' }))
@@ -472,8 +521,9 @@ describe('reconciliation', () => {
     )
     expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
     expect(server.entries.get('x')).toMatchObject({ notes: 'local' })
+    expect(server.entries.get('y')).toMatchObject({ notes: 'server' })
     const local: Entry[] = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
-    expect(local.find((e) => e.id === 'y')?.notes).toBe('server')
+    expect(local.find((e) => e.id === 'y')?.notes).toBeUndefined()
   })
 
   it('queues and replays an offline import of an entry that has no updatedAt', async () => {
@@ -513,20 +563,19 @@ describe('reconciliation', () => {
     expect(await repo.testConnection()).toEqual({ kind: 'connected' })
   })
 
-  it('still brings server entries in when the server rejects a push, and keeps it pending', async () => {
+  it('keeps a push the server rejects pending, without holding back a removal', async () => {
     const server = installFakeServer()
     server.down = true
     const repo = make({ reconcileOnLoad: false })
     await repo.put(makeEntry('mine'))
+    await repo.remove('gone')
     await settle(repo)
     server.down = false
     server.rejectBulk = true
-    server.entries.set('srv', makeEntry('srv'))
-    const listener = vi.fn()
-    repo.onReconciled(listener)
+    server.entries.set('gone', makeEntry('gone'))
     expect(await repo.reconcile()).toBe(false)
-    expect(localIds()).toEqual(['mine', 'srv'])
-    expect(listener).toHaveBeenCalledTimes(1)
+    expect(server.entries.has('gone')).toBe(false)
+    expect(localIds()).toEqual(['mine'])
     expect(pending()).toEqual([{ op: 'put', id: 'mine', updatedAt: '2000-01-04T00:00:00.000Z' }])
     server.rejectBulk = false
     expect(await repo.reconcile()).toBe(true)
@@ -581,7 +630,7 @@ describe('reconciliation', () => {
       return { server, repo }
     }
 
-    it('does not pull server-only entries back in while its operations are unsent', async () => {
+    it('keeps its operations pending while the server refuses them', async () => {
       const { server, repo } = offlineClearAll()
       server.down = true
       await repo.replaceAll([])
@@ -593,18 +642,17 @@ describe('reconciliation', () => {
       expect(pending().map((p: { id: string }) => p.id)).toEqual(['x'])
     })
 
-    it('lets server-only entries reach the app once its operations have replayed', async () => {
+    it('leaves server-only entries on the server once its operations have replayed', async () => {
       const { server, repo } = offlineClearAll()
       server.down = true
       await repo.replaceAll([])
       await settle(repo)
       server.down = false
-      const listener = vi.fn()
-      repo.onReconciled(listener)
       expect(await repo.reconcile()).toBe(true)
       expect(server.entries.has('x')).toBe(false)
-      expect(localIds()).toEqual(['u'])
-      expect(listener).toHaveBeenLastCalledWith([expect.objectContaining({ id: 'u' })])
+      expect(server.entries.has('u')).toBe(true)
+      expect(localIds()).toEqual([])
+      expect(repo.pendingCount()).toBe(0)
     })
   })
 })
@@ -647,8 +695,6 @@ describe('testConnection', () => {
     vi.stubGlobal('navigator', { permissions: { query: async () => ({ state }) } })
     const server = installFakeServer()
     const repo = make({ reconcileOnLoad: false })
-    const listener = vi.fn()
-    repo.onReconciled(listener)
     await repo.put(makeEntry('a'))
     await settle(repo)
     expect(server.calls).toEqual([])
@@ -662,8 +708,20 @@ describe('testConnection', () => {
     expect(await repo.testConnection()).toEqual({ kind: 'connected' })
     await vi.waitFor(() => expect(repo.pendingCount()).toBe(0))
     expect(server.entries.has('a')).toBe(true)
-    expect(localIds()).toEqual(['a', 's'])
-    expect(listener).toHaveBeenCalled()
+    expect(localIds()).toEqual(['a'])
+    expect(server.entries.has('s')).toBe(true)
+  })
+
+  it('copies nothing when asked not to reconcile', async () => {
+    const server = installFakeServer()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('a')]))
+    const repo = make({ reconcileOnLoad: false })
+    expect(await repo.testConnection({ reconcile: false })).toEqual({ kind: 'connected' })
+    // A reconciliation would be queued by now and finish within a tick: the fake
+    // server answers at once. reconcile() itself can't be the barrier, since it pushes.
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(server.calls.map((c) => c.method)).toEqual(['GET'])
+    expect(server.entries.size).toBe(0)
   })
 
   it('reports malformed for a 2xx that is not an Entry[]', async () => {
@@ -706,15 +764,12 @@ describe('loopback-network permission', () => {
       const server = installFakeServer()
       localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('old')]))
       const repo = make()
-      const listener = vi.fn()
-      repo.onReconciled(listener)
       await repo.list()
       await repo.put(makeEntry('a'))
       await repo.remove('old')
       await repo.replaceAll([makeEntry('b')])
       await settle(repo)
       expect(server.calls).toEqual([])
-      expect(listener).not.toHaveBeenCalled()
       expect(localIds()).toEqual(['b'])
       expect(repo.pendingCount()).toBeGreaterThan(0)
     },
