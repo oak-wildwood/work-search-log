@@ -75,14 +75,13 @@ server.
   "Apps on device" in site settings; the Permissions API calls it `loopback-network`.
 - When a test fails the page can't distinguish four causes (permission refused, server not running, wrong
   address or port, origin not on the server's allowed list), so the UI lists all four.
-- The server can hold entries the log doesn't, and job-funnel sees them, until they are removed there
-  by hand. A cleared browser is recovered from a JSON backup, not from the server.
+- The server can hold entries the log doesn't, until they are removed there by hand. A cleared browser
+  is recovered from a JSON backup, not from the server.
 - **Agreed: nothing is written from the server to the log until two-way sync is decided on as its own
-  phase**, with its own ADR. The likely reasons are job-funnel creating entries (such as a skill that
-  logs an application to both at once) and restoring a cleared browser from the server. That ADR has to
-  settle how removals are recorded on both sides so they can't come back, how the claimant reviews
-  anything before it enters the log, job-funnel's "store, not author" rule (its ADR 0006), and that every
-  entry is still the claimant's own account of what they did
+  phase**, with its own ADR. The likely reasons are the companion server adding entries of its own and
+  restoring a cleared browser from the server. That ADR has to settle how removals are recorded on both
+  sides so they can't come back, how the claimant reviews anything before it enters the log, and that
+  every entry is still the claimant's own account of what they did
   ([ADR 0004](./0004-no-autofill-no-compliance-claims.md)).
 - [ADR 0001](./0001-browser-only-storage.md) still describes the default. Revisit this record if a
   second network backend is ever proposed: the loopback-only rule is what keeps it small.
