@@ -335,7 +335,7 @@ export class LocalServerRepository implements EntryRepository {
     // allows one) counts as oldest.
     const push = logEntries.filter((entry) => {
       const serverCopy = serverById.get(entry.id)
-      if (!serverCopy || pendingById.get(entry.id)?.op === 'put') return true
+      if (!serverCopy || pendingById.has(entry.id)) return true
       return isLaterTimestamp(stampOf(entry, ''), stampOf(serverCopy, ''))
     })
     const remove = pending

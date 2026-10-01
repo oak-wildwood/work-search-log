@@ -341,6 +341,17 @@ describe('StorageSettings', () => {
       expect(statusText()).toBe('In use. 1 change waiting for the server.')
     })
 
+    it('does not say In use for a server turned on this session, before the next load', async () => {
+      createEntryRepository()
+      useStorageBackend().save({
+        backend: 'local-server',
+        serverUrl: DEFAULT_SERVER_URL,
+        token: TOKEN,
+      })
+      await mountSection()
+      expect(statusText()).toBe('Not tested yet')
+    })
+
     it('stops saying In use while the address or token differs from the one in use', async () => {
       useStorageBackend().save({
         backend: 'local-server',
