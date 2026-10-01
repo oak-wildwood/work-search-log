@@ -95,11 +95,12 @@ off unless you turn it on, it works in Chrome, and your entries stay in the brow
   is kept in this browser only, and never appears in the JSON backup, the CSV or the printed sheet.
 - **Turning it on copies your log** to the server, after you confirm, the next time you open the app.
   Nothing is deleted from the browser.
-- **Your log in the browser is the record.** The server never adds an entry to it, so one you removed
-  can't come back. The exception is restoring: if this browser's site data was cleared, turn the
-  server on before logging or importing anything, and its copy fills the empty log.
+- **Copying goes one way.** Your log in the browser is the record, and nothing on the server is ever
+  written back to it: no entry is added, changed or restored from the server, so one you removed
+  can't come back.
 - **The server copy isn't a backup.** Removing an entry, Clear all or importing a backup changes the
-  server too, so keep exporting a JSON backup now and then.
+  server too, and a cleared browser isn't restored from it, so keep exporting a JSON backup now and
+  then.
 - **Turning it off** goes back to browser storage, leaves whatever is on the server alone, and forgets
   the token.
 - **A server that is down never stops you logging.** The entry is saved in the browser and the

@@ -32,14 +32,16 @@ browser storage rather than blocking anything.
 setting is saved; the one request is the Test connection button. While Chrome's permission prompt is open the test waits with no
 timeout and the button disabled, since a timeout would cancel the prompt before it is read.
 
-**The browser's log is the record; the server holds a copy.** When the two disagree about whether an
-entry exists, the browser wins: an entry the log lacks is never added from the server, and a removal
-made here is replayed even over a newer server copy. Otherwise an entry removed while the setting was
-off, or after `job-funnel import-wsl` copied it, would reappear in the record. Such an entry is left
-on the server rather than deleted, since a log restored from an older backup would otherwise wipe the
-newer entries only the server still has. The one exception is an empty log in a browser that has
-never queued a change for a server, which is what one looks like after its site data is cleared: then
-the server's entries are restored into it.
+**One way: the browser's log is the record, and the server holds a copy.** Changes flow from the
+browser to the server and never back. Nothing the server holds is written to the log: an entry only the
+server has is not added, a newer server copy does not replace the one here, and an empty or cleared log
+is not restored from it. The server's list only decides what to send, and a removal made here is
+replayed even over a newer server copy. An entry only the server has is left there rather than deleted,
+since it may be the only copy of something newer than an older backup the log was restored from. A
+two-way sync would let an entry removed while the setting was off, or test data that reached the server,
+appear in the record unreviewed, so the adapter has no path that writes to the log, and
+`EntryRepository` no longer has a hook for one. Two-way sync waits until it is decided on as its own
+phase (see Consequences).
 
 **Consent is consent to turn it on.** The adapter mirrors every entry the server lacks, whenever it is
 on, so the confirmation dialog that offers to copy the log is the gate on enabling: Confirm turns it on,
@@ -74,12 +76,13 @@ server.
 - When a test fails the page can't distinguish four causes (permission refused, server not running, wrong
   address or port, origin not on the server's allowed list), so the UI lists all four.
 - The server can hold entries the log doesn't, and job-funnel sees them, until they are removed there
-  by hand. Restoring from the server only works if it is turned on in the cleared browser before
-  anything is logged or imported.
-- Revisit the ownership rule if job-funnel should ever create entries, such as a skill that logs an
-  application to both at once. The server would then be a source rather than a copy, so the rule would
-  no longer hold, and removals would need recording on both sides so they can't come back. That also
-  amends job-funnel's "store, not author" rule (its ADR 0006), and every entry would still have to be
-  the claimant's own account of what they did ([ADR 0004](./0004-no-autofill-no-compliance-claims.md)).
+  by hand. A cleared browser is recovered from a JSON backup, not from the server.
+- **Agreed: nothing is written from the server to the log until two-way sync is decided on as its own
+  phase**, with its own ADR. The likely reasons are job-funnel creating entries (such as a skill that
+  logs an application to both at once) and restoring a cleared browser from the server. That ADR has to
+  settle how removals are recorded on both sides so they can't come back, how the claimant reviews
+  anything before it enters the log, job-funnel's "store, not author" rule (its ADR 0006), and that every
+  entry is still the claimant's own account of what they did
+  ([ADR 0004](./0004-no-autofill-no-compliance-claims.md)).
 - [ADR 0001](./0001-browser-only-storage.md) still describes the default. Revisit this record if a
   second network backend is ever proposed: the loopback-only rule is what keeps it small.
