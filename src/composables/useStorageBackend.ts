@@ -39,12 +39,18 @@ const pendingCount = ref(0)
 
 /** A plain-language reason the address can't be used, or null when it can. */
 export function validateServerUrl(raw: string): string | null {
-  if (raw.trim() === '') return 'Enter the address the server is running at.'
+  const address = raw.trim()
+  if (address === '') return 'Enter the address the server is running at.'
   try {
-    parseLoopbackBase(raw.trim())
+    new URL(address)
+  } catch {
+    return `That isn’t a full address. It should look like ${DEFAULT_SERVER_URL}.`
+  }
+  try {
+    parseLoopbackBase(address)
     return null
-  } catch (error) {
-    return error instanceof Error ? error.message : 'That address can’t be used.'
+  } catch {
+    return `Use an address on this computer, such as ${DEFAULT_SERVER_URL}. Only 127.0.0.1, localhost and [::1] are allowed.`
   }
 }
 

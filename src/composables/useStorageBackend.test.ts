@@ -176,16 +176,17 @@ describe('validateServerUrl', () => {
   })
 
   it.each([
-    ['', /address/i],
-    ['   ', /address/i],
-    ['not a url', /valid/i],
-    ['http://example.com', /loopback/i],
-    ['http://127.0.0.1@example.com', /loopback/i],
-    ['http://localhost.example.com', /loopback/i],
-    ['http://user:pw@127.0.0.1', /loopback/i],
-    ['ftp://127.0.0.1', /loopback/i],
+    ['', /enter the address/i],
+    ['   ', /enter the address/i],
+    ['not a url', /look like http:\/\/127\.0\.0\.1:8765/],
+    ['http://example.com', /on this computer/],
+    ['http://127.0.0.1@example.com', /on this computer/],
+    ['http://localhost.example.com', /on this computer/],
+    ['http://user:pw@127.0.0.1', /on this computer/],
+    ['ftp://127.0.0.1', /on this computer/],
   ])('rejects %j in plain language', async (url, message) => {
     const { validateServerUrl } = await load()
     expect(validateServerUrl(url)).toMatch(message)
+    expect(validateServerUrl(url)).not.toMatch(/loopback|URL/i)
   })
 })
