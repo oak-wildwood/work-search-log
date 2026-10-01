@@ -441,6 +441,17 @@ describe('reconciliation', () => {
     expect(pending()).toEqual([])
   })
 
+  it('sends no delete for a pending remove the server has nothing for', async () => {
+    const server = installFakeServer()
+    localStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify([{ op: 'remove', id: 'gone', updatedAt: '2000-01-05T00:00:00.000Z' }]),
+    )
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(server.calls.map((call) => call.method)).toEqual(['GET'])
+    expect(pending()).toEqual([])
+  })
+
   it('does not delete from the server an entry the log still has, despite a stale remove', async () => {
     const server = installFakeServer()
     server.entries.set('a', makeEntry('a'))
