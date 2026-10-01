@@ -330,14 +330,14 @@ export class LocalServerRepository implements EntryRepository {
     const logEntries = this.local.loadSync() ?? []
     const logIds = new Set(logEntries.map((entry) => entry.id))
     const serverById = new Map(server.map((entry) => [entry.id, entry]))
+    // A change made here is replayed even over a newer server copy. Otherwise an entry
+    // is sent when its copy here is newer; one with no updatedAt (a backup import
+    // allows one) counts as oldest.
     const push = logEntries.filter((entry) => {
       const serverCopy = serverById.get(entry.id)
-      // An entry with no updatedAt (a backup import allows one) is as new as its
-      // pending put, or oldest of all when there is none.
-      const logStamp = stampOf(entry, pendingById.get(entry.id)?.updatedAt ?? '')
-      return !serverCopy || isLaterTimestamp(logStamp, stampOf(serverCopy, ''))
+      if (!serverCopy || pendingById.get(entry.id)?.op === 'put') return true
+      return isLaterTimestamp(stampOf(entry, ''), stampOf(serverCopy, ''))
     })
-    // A removal made here is replayed even over a newer server copy.
     const remove = pending
       .filter((op) => op.op === 'remove' && !logIds.has(op.id) && serverById.has(op.id))
       .map((op) => op.id)

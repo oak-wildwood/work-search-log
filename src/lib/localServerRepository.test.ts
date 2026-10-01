@@ -263,6 +263,22 @@ describe('local first', () => {
     expect(localIds()).toEqual([])
   })
 
+  it('replays a pending edit even when the server holds a newer copy', async () => {
+    const server = installFakeServer()
+    server.entries.set(
+      'a',
+      makeEntry('a', { notes: 'server', updatedAt: '2999-01-01T00:00:00.000Z' }),
+    )
+    server.down = true
+    const repo = make({ reconcileOnLoad: false })
+    await repo.put(makeEntry('a', { notes: 'edited offline' }))
+    await settle(repo)
+    server.down = false
+    expect(await repo.reconcile()).toBe(true)
+    expect(server.entries.get('a')?.notes).toBe('edited offline')
+    expect(repo.pendingCount()).toBe(0)
+  })
+
   it('treats a 404 on delete as success', async () => {
     const server = installFakeServer()
     const repo = make({ reconcileOnLoad: false })
