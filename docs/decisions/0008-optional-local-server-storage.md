@@ -32,6 +32,13 @@ browser storage rather than blocking anything.
 request is the Test connection button. While Chrome's permission prompt is open the test waits with no
 timeout and the button disabled, since a timeout would cancel the prompt before it is read.
 
+**The browser's log is the record; the server holds a copy.** When the two disagree about whether an
+entry exists, the browser wins: an entry on the server that the log lacks is removed from the server,
+never added to the log. Otherwise an entry removed while the setting was off, or after `job-funnel
+import-wsl` copied it, would reappear in the record. The one exception is an empty log with nothing
+waiting to sync, which is what a browser looks like after its site data is cleared: then the server's
+entries are restored into it.
+
 **Consent is consent to turn it on.** The adapter mirrors every entry the server lacks, whenever it is
 on, so the confirmation dialog that offers to copy the log is the gate on enabling: Confirm turns it on,
 Cancel changes nothing. The copy happens on the next load, not at confirmation: until then the session
@@ -66,5 +73,10 @@ server.
   address or port, origin not on the server's allowed list), so the UI lists all four.
 - After an offline "Clear all", entries that exist only on the server come back once the clear has
   replayed, since they were never seen here to remove.
+- Revisit the ownership rule if job-funnel should ever create entries, such as a skill that logs an
+  application to both at once. The server would then be a source rather than a copy, so the rule would
+  no longer hold, and removals would need recording on both sides so they can't come back. That also
+  amends job-funnel's "store, not author" rule (its ADR 0006), and every entry would still have to be
+  the claimant's own account of what they did ([ADR 0004](./0004-no-autofill-no-compliance-claims.md)).
 - [ADR 0001](./0001-browser-only-storage.md) still describes the default. Revisit this record if a
   second network backend is ever proposed: the loopback-only rule is what keeps it small.
