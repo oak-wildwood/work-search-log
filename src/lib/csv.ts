@@ -12,6 +12,7 @@ const HEADERS = [
   'Contact Method',
   'Result',
   'Notes',
+  'Contract',
 ]
 
 function escapeCsvField(value: string): string {
@@ -34,6 +35,7 @@ export function toCsv(entries: Entry[]): string {
         e.contactMethod,
         e.result,
         e.notes,
+        e.contract ? 'Yes' : '',
       ]
         .map(escapeCsvField)
         .join(','),

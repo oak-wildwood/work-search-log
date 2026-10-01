@@ -17,6 +17,12 @@ export interface Entry {
   contactMethod: string
   result: string
   notes: string
+  /**
+   * The claimant's own funnel-tracking flag for contract roles. Not part of what
+   * an agency asks for, so it is never printed or counted. Absent on entries
+   * logged before it existed, which read as "not contract".
+   */
+  contract?: boolean
   createdAt: string
   updatedAt: string
 }

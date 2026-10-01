@@ -312,6 +312,10 @@ describe('unreachable is not empty', () => {
       'an entry with a non-string field',
       () => new Response('[{"id":"x","notes":5}]', { status: 200 }),
     ],
+    [
+      'an entry with a non-boolean contract flag',
+      () => new Response('[{"id":"x","contract":"yes"}]', { status: 200 }),
+    ],
     ['an entry that is not an object', () => new Response('["x"]', { status: 200 })],
   ])('never deletes local entries on %s at load', async (_name, make_) => {
     const server = installFakeServer()

@@ -88,6 +88,9 @@ async function handleRemove(entry: Entry) {
         <span> · </span>
         <HighlightText :text="entry.siteAppliedOn" :query="searchQuery" :active="highlighted" />
       </template>
+      <!-- The claimant's own funnel tag, not something an agency asked for, so it
+           stays off the printed sheet. -->
+      <span v-if="entry.contract" class="contract-tag no-print">Contract</span>
     </div>
 
     <div v-if="hasDetails" class="details" :class="{ collapsed: !showDetails }">
@@ -170,6 +173,16 @@ async function handleRemove(entry: Entry) {
   font-size: 13px;
   color: var(--muted);
   margin-top: 2px;
+}
+.contract-tag {
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--brass);
+  border-radius: 3px;
+  color: var(--brass);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 .details {
   margin-top: 8px;

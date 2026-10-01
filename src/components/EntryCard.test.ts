@@ -101,6 +101,17 @@ describe('EntryCard', () => {
     expect(wrapper.get('.details').classes()).not.toContain('collapsed')
   })
 
+  it('tags a contract role, keeps the tag off the printed sheet, and omits it otherwise', () => {
+    wrapper = mount(EntryCard, { props: { entry: entry({ contract: true }) } })
+    const tag = wrapper.get('.contract-tag')
+    expect(tag.text()).toBe('Contract')
+    expect(tag.classes()).toContain('no-print')
+
+    wrapper.unmount()
+    wrapper = mount(EntryCard, { props: { entry: entry() } })
+    expect(wrapper.find('.contract-tag').exists()).toBe(false)
+  })
+
   it('emits edit with the whole entry', async () => {
     const subject = entry({ employer: 'TechNova Systems' })
     wrapper = mount(EntryCard, { props: { entry: subject } })
