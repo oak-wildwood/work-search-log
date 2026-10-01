@@ -45,6 +45,14 @@ const keyOf = () => `${draftUrl.value.trim()}\n${draftToken.value}`
 const useServer = computed(() => draftBackend.value === 'local-server')
 const urlError = computed(() => (useServer.value ? validateServerUrl(draftUrl.value) : null))
 const busy = computed(() => status.value.kind === 'testing' || status.value.kind === 'waiting')
+// Whether the drafts still describe the server this page load is using.
+const draftsInUse = computed(
+  () =>
+    serverActive.value &&
+    storage.value.backend === 'local-server' &&
+    draftUrl.value.trim() === storage.value.serverUrl &&
+    draftToken.value === storage.value.token,
+)
 
 function reset() {
   draftBackend.value = storage.value.backend
@@ -84,7 +92,7 @@ const statusText = computed(() => {
     case 'malformed':
       return 'Error: the server sent an unexpected response'
     default:
-      if (serverActive.value && storage.value.backend === 'local-server') {
+      if (draftsInUse.value) {
         return pendingCount.value === 0
           ? 'In use. No changes waiting.'
           : `In use. ${plural(pendingCount.value)} waiting for the server.`

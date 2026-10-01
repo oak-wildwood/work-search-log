@@ -340,6 +340,26 @@ describe('StorageSettings', () => {
       await mountSection()
       expect(statusText()).toBe('In use. 1 change waiting for the server.')
     })
+
+    it('stops saying In use while the address or token differs from the one in use', async () => {
+      useStorageBackend().save({
+        backend: 'local-server',
+        serverUrl: DEFAULT_SERVER_URL,
+        token: TOKEN,
+      })
+      stubFetch(() => {
+        throw new TypeError('Failed to fetch')
+      })
+      createEntryRepository()
+      await mountSection()
+      expect(statusText()).toMatch(/^In use/)
+      await wrapper!.get('[data-testid="storage-url"]').setValue('http://127.0.0.1:9999')
+      expect(statusText()).toBe('Not tested yet')
+      await wrapper!.get('[data-testid="storage-url"]').setValue(` ${DEFAULT_SERVER_URL} `)
+      expect(statusText()).toMatch(/^In use/)
+      await wrapper!.get('[data-testid="storage-token"]').setValue('another-synthetic-token')
+      expect(statusText()).toBe('Not tested yet')
+    })
   })
 
   describe('turning it on', () => {
