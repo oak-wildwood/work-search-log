@@ -114,6 +114,37 @@ describe('EntryForm', () => {
     })
   })
 
+  describe('contract flag', () => {
+    async function submitted(wrapper: ReturnType<typeof mount>) {
+      await wrapper.get('form').trigger('submit')
+      return wrapper.emitted('submit')?.[0]?.[0] as EntryDraft
+    }
+
+    it('is unchecked by default and saves as false', async () => {
+      const wrapper = mount(EntryForm)
+      await wrapper.get('#f-date').setValue('2026-08-10')
+      await wrapper.get('#f-activity').setValue('apply_online')
+      expect((wrapper.get('#f-contract').element as HTMLInputElement).checked).toBe(false)
+      expect((await submitted(wrapper)).contract).toBe(false)
+    })
+
+    it('saves true once checked, and starts unchecked again after saving', async () => {
+      const wrapper = mount(EntryForm)
+      await wrapper.get('#f-date').setValue('2026-08-10')
+      await wrapper.get('#f-activity').setValue('apply_online')
+      await wrapper.get('#f-contract').setValue(true)
+      expect((await submitted(wrapper)).contract).toBe(true)
+      expect((wrapper.get('#f-contract').element as HTMLInputElement).checked).toBe(false)
+    })
+
+    it('loads an entry that predates the flag as unchecked, even after a contract one', async () => {
+      const wrapper = mount(EntryForm, { props: { editing: makeEntry({ contract: true }) } })
+      expect((wrapper.get('#f-contract').element as HTMLInputElement).checked).toBe(true)
+      await wrapper.setProps({ editing: makeEntry({ id: 'e2' }) })
+      expect((wrapper.get('#f-contract').element as HTMLInputElement).checked).toBe(false)
+    })
+  })
+
   describe('legacy activity path', () => {
     it('keeps the original label instead of reassigning or blanking it', async () => {
       const { setStateCode } = useSettings()

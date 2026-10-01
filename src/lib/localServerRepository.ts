@@ -76,7 +76,8 @@ function isEntry(value: unknown): value is Entry {
   const v = value as Record<string, unknown>
   return (
     typeof v.id === 'string' &&
-    STRING_FIELDS.every((k) => v[k] === undefined || typeof v[k] === 'string')
+    STRING_FIELDS.every((k) => v[k] === undefined || typeof v[k] === 'string') &&
+    (v.contract === undefined || typeof v.contract === 'boolean')
   )
 }
 

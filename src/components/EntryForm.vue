@@ -30,6 +30,7 @@ function blankDraft(): EntryDraft {
     contactMethod: '',
     result: '',
     notes: '',
+    contract: false,
   }
 }
 
@@ -77,7 +78,9 @@ watch(siteChoice, (choice) => {
 watch(
   () => props.editing,
   (entry) => {
-    Object.assign(draft, entry ? { ...entry } : blankDraft())
+    // Blank first, so a field the entry predates (contract) can't inherit the
+    // previous draft's value.
+    Object.assign(draft, blankDraft(), entry)
     syncSiteChoice(draft.siteAppliedOn)
     // An entry logged under a different config keeps its original label rather than
     // being silently reassigned or blanked.
@@ -227,6 +230,13 @@ function handleCancel() {
       </div>
     </div>
 
+    <div class="field check-field">
+      <label class="check-label" for="f-contract">
+        <input id="f-contract" v-model="draft.contract" type="checkbox" />
+        Contract role
+      </label>
+    </div>
+
     <template v-if="showMoreFields">
       <hr class="divider" />
 
@@ -352,6 +362,18 @@ h2 {
   .two-col {
     grid-template-columns: 1fr;
   }
+}
+.field .check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  cursor: pointer;
+}
+input[type='checkbox'] {
+  width: auto;
+  margin: 0;
+  padding: 0;
 }
 input,
 select,

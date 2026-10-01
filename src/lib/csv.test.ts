@@ -28,7 +28,7 @@ describe('toCsv', () => {
     const lines = csv.split('\n')
     expect(lines).toHaveLength(2)
     expect(lines[0]).toBe(
-      'Date,Activity,Site Applied On,Job Type Sought,Employer,Address/Website,Phone,Contact Name,Contact Method,Result,Notes',
+      'Date,Activity,Site Applied On,Job Type Sought,Employer,Address/Website,Phone,Contact Name,Contact Method,Result,Notes,Contract',
     )
   })
 
@@ -45,6 +45,18 @@ describe('toCsv', () => {
     const [, first, second] = csv.split('\n')
     expect(first).toContain('Earlier Co')
     expect(second).toContain('Later Co')
+  })
+
+  it('marks contract roles and leaves the column empty otherwise', () => {
+    const csv = toCsv([
+      makeEntry({ id: 'a', date: '2026-08-05', contract: true }),
+      makeEntry({ id: 'b', date: '2026-08-06', contract: false }),
+      makeEntry({ id: 'c', date: '2026-08-07' }),
+    ])
+    const [, contract, notContract, predates] = csv.split('\n')
+    expect(contract.endsWith(',"","Yes"')).toBe(true)
+    expect(notContract.endsWith(',"",""')).toBe(true)
+    expect(predates.endsWith(',"",""')).toBe(true)
   })
 
   it('treats missing optional fields as empty strings, not "undefined"', () => {
