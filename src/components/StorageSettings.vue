@@ -165,8 +165,8 @@ async function commit(): Promise<boolean> {
   // A different server starts out empty, so it gets a copy of the log too. The adapter
   // mirrors every entry it lacks, so this is consent to turn it on. The copy itself waits
   // for the next load: this session keeps storing in the browser only, and copying now
-  // would put on the server entries the claimant may remove before then, which the next
-  // load would then bring back.
+  // would put on the server entries the claimant may remove before then, which would
+  // then stay there.
   const copying =
     (saved.backend !== 'local-server' || saved.serverUrl !== url) && entries.value.length > 0
   if (copying && !(await consentDialog.value?.open())) return false
@@ -273,7 +273,7 @@ defineExpose({ reset, commit })
     <ConfirmDialog ref="consentDialog" confirm-label="Turn on and copy">
       Copy your {{ entries.length }} {{ entries.length === 1 ? 'entry' : 'entries' }} to the server
       on this computer the next time you open the app? They also stay in this browser, and nothing
-      is deleted.
+      is deleted. Entries already on the server are never added to your log.
     </ConfirmDialog>
   </fieldset>
 </template>

@@ -28,22 +28,24 @@ failed call queues the change as pending. An unreachable server is never read as
 adapter is never built in a demo or preview build, and a saved choice that can't be honored falls back to
 browser storage rather than blocking anything.
 
-**No request until asked.** Nothing is sent on load, on a timer, or when the setting is saved. The one
-request is the Test connection button. While Chrome's permission prompt is open the test waits with no
+**No request until it is on.** While it is off, nothing is sent on load, on a timer, or when the
+setting is saved; the one request is the Test connection button. While Chrome's permission prompt is open the test waits with no
 timeout and the button disabled, since a timeout would cancel the prompt before it is read.
 
 **The browser's log is the record; the server holds a copy.** When the two disagree about whether an
-entry exists, the browser wins: an entry on the server that the log lacks is removed from the server,
-never added to the log. Otherwise an entry removed while the setting was off, or after `job-funnel
-import-wsl` copied it, would reappear in the record. The one exception is an empty log with nothing
-waiting to sync, which is what a browser looks like after its site data is cleared: then the server's
-entries are restored into it.
+entry exists, the browser wins: an entry the log lacks is never added from the server, and a removal
+made here is replayed even over a newer server copy. Otherwise an entry removed while the setting was
+off, or after `job-funnel import-wsl` copied it, would reappear in the record. Such an entry is left
+on the server rather than deleted, since a log restored from an older backup would otherwise wipe the
+newer entries only the server still has. The one exception is an empty log in a browser that has
+never queued a change for a server, which is what one looks like after its site data is cleared: then
+the server's entries are restored into it.
 
 **Consent is consent to turn it on.** The adapter mirrors every entry the server lacks, whenever it is
 on, so the confirmation dialog that offers to copy the log is the gate on enabling: Confirm turns it on,
 Cancel changes nothing. The copy happens on the next load, not at confirmation: until then the session
 still stores in the browser only, so copying earlier would put entries on the server that the claimant
-might remove before reloading, and the next load would bring them back. Nothing local is ever deleted.
+might remove before reloading, and they would stay there. Nothing local is ever deleted.
 Turning it off returns to browser storage, leaves the server as it was, and forgets the token (the
 address is kept).
 
@@ -71,8 +73,9 @@ server.
   "Apps on device" in site settings; the Permissions API calls it `loopback-network`.
 - When a test fails the page can't distinguish four causes (permission refused, server not running, wrong
   address or port, origin not on the server's allowed list), so the UI lists all four.
-- After an offline "Clear all", entries that exist only on the server come back once the clear has
-  replayed, since they were never seen here to remove.
+- The server can hold entries the log doesn't, and job-funnel sees them, until they are removed there
+  by hand. Restoring from the server only works if it is turned on in the cleared browser before
+  anything is logged or imported.
 - Revisit the ownership rule if job-funnel should ever create entries, such as a skill that logs an
   application to both at once. The server would then be a source rather than a copy, so the rule would
   no longer hold, and removals would need recording on both sides so they can't come back. That also

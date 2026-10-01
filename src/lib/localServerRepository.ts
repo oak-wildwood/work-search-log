@@ -104,12 +104,6 @@ export class LocalServerRepository implements EntryRepository {
   private readonly pendingListeners = new Set<(count: number) => void>()
   // Network work runs one at a time, in the order it was asked for.
   private chain: Promise<unknown> = Promise.resolve()
-  // The operations (as `key`s) each replaceAll queued, for as long as any of them is
-  // still pending. While one is, reconciliation won't pull server-only entries in, so
-  // a "clear all" made while offline doesn't undo itself. It ends when the operations
-  // have been replayed, not when one particular request succeeds, so a failed attempt
-  // can't hold server-only entries back for the rest of the session.
-  private replaces: Set<string>[] = []
 
   constructor(options: LocalServerOptions) {
     if (DEMO_DATA_ENABLED) throw new Error('The local server is never used in a demo build')
@@ -224,7 +218,6 @@ export class LocalServerRepository implements EntryRepository {
         .map((e): PendingOp => ({ op: 'remove', id: e.id, updatedAt: now })),
     ]
     const queued = this.setPending(ops)
-    if (ops.length > 0) this.replaces.push(new Set(ops.map(key)))
     void this.enqueue(async () => {
       if (!(await this.networkAllowed())) return
       const { result, entries: server } = await this.fetchList(true)
@@ -340,25 +333,27 @@ export class LocalServerRepository implements EntryRepository {
     const pending = this.readPending()
     const pendingById = new Map(pending.map((p) => [p.id, p]))
     const localAtStart = this.local.loadSync() ?? []
+    // The browser's log is the record, so an entry only the server has stays there: it
+    // was removed here, or reached the server some other way. The exception is an empty
+    // log in a browser that has never queued a change, which is what one looks like
+    // after its site data was cleared, and then the server restores it.
+    const restoring = localAtStart.length === 0 && this.neverQueued()
     const localById = new Map(localAtStart.map((e) => [e.id, e]))
     const serverById = new Map(server.map((e) => [e.id, e]))
     const push: Entry[] = []
     const remove: string[] = []
     const take: Entry[] = []
-    const serverOnly: Entry[] = []
 
     for (const id of new Set([...localById.keys(), ...serverById.keys()])) {
       const l = localById.get(id)
       const s = serverById.get(id)
       const p = pendingById.get(id)
       if (p?.op === 'remove') {
-        if (!s) continue
-        if (isLaterTimestamp(s.updatedAt, p.updatedAt)) take.push(s)
-        else remove.push(id)
+        if (s) remove.push(id)
       } else if (l && !s) {
         push.push(l)
       } else if (!l && s) {
-        serverOnly.push(s)
+        if (restoring) take.push(s)
       } else if (l && s) {
         // An entry with no updatedAt (a backup import allows one) is as new as its
         // pending put, or oldest of all when there is none.
@@ -384,7 +379,6 @@ export class LocalServerRepository implements EntryRepository {
       }
     }
     const resolved = pending.filter((p) => !unresolved.has(p.id))
-    if (!this.replaceStillPending(new Set(resolved.map(key)))) take.push(...serverOnly)
 
     // Commit against the local log as it is now: the claimant may have written
     // while the network calls were in flight, and that must not be undone.
@@ -416,13 +410,16 @@ export class LocalServerRepository implements EntryRepository {
     return unresolved.size === 0
   }
 
-  /** Whether a replaceAll still has an operation that `cleared` (as keys) won't remove. */
-  private replaceStillPending(cleared: Set<string>): boolean {
-    const live = this.readPending().filter((p) => !cleared.has(key(p)))
-    return this.replaces.some((replace) => live.some((p) => replace.has(key(p))))
-  }
-
   // ---- pending queue ----
+
+  /** True only if the queue was never written in this browser. Unreadable counts as written. */
+  private neverQueued(): boolean {
+    try {
+      return localStorage.getItem(PENDING_KEY) === null
+    } catch {
+      return false
+    }
+  }
 
   private readPending(): PendingOp[] {
     const raw = readJSON<unknown>(PENDING_KEY, [])
@@ -449,8 +446,6 @@ export class LocalServerRepository implements EntryRepository {
   private clearPending(done: PendingOp[]) {
     const sent = new Set(done.map(key))
     this.writePending(this.readPending().filter((p) => !sent.has(key(p))))
-    const live = new Set(this.readPending().map(key))
-    this.replaces = this.replaces.filter((replace) => [...replace].some((k) => live.has(k)))
   }
 
   /** Listeners hear only about a count that was actually stored. */

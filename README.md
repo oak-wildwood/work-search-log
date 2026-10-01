@@ -90,11 +90,16 @@ off unless you turn it on, it works in Chrome, and your entries stay in the brow
 - **Only your own computer.** The address must be `127.0.0.1`, `localhost` or `[::1]`; anything else
   is refused in the form and again in the code, and requests never follow a redirect. The usual port
   is 8765.
-- **Nothing is sent until you press Test connection.** Not on load, not on a timer, not when you save.
-  The token you enter is kept in this browser only, and never appears in the JSON backup, the CSV or
-  the printed sheet.
+- **Nothing is sent while it is off**, except when you press Test connection. Once it is on, each
+  change is copied as you make it, and the app catches up each time you open it. The token you enter
+  is kept in this browser only, and never appears in the JSON backup, the CSV or the printed sheet.
 - **Turning it on copies your log** to the server, after you confirm, the next time you open the app.
   Nothing is deleted from the browser.
+- **Your log in the browser is the record.** The server never adds an entry to it, so one you removed
+  can't come back. The exception is restoring: if this browser's site data was cleared, turn the
+  server on before logging or importing anything, and its copy fills the empty log.
+- **The server copy isn't a backup.** Removing an entry, Clear all or importing a backup changes the
+  server too, so keep exporting a JSON backup now and then.
 - **Turning it off** goes back to browser storage, leaves whatever is on the server alone, and forgets
   the token.
 - **A server that is down never stops you logging.** The entry is saved in the browser and the

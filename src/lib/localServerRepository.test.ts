@@ -251,6 +251,18 @@ describe('local first', () => {
     expect(localIds()).toEqual([])
   })
 
+  it('replays a pending remove even when the server holds a newer copy', async () => {
+    const server = installFakeServer()
+    server.entries.set('a', makeEntry('a', { updatedAt: '2999-01-01T00:00:00.000Z' }))
+    localStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify([{ op: 'remove', id: 'a', updatedAt: '2000-01-05T00:00:00.000Z' }]),
+    )
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(server.entries.has('a')).toBe(false)
+    expect(localIds()).toEqual([])
+  })
+
   it('treats a 404 on delete as success', async () => {
     const server = installFakeServer()
     const repo = make({ reconcileOnLoad: false })
@@ -404,7 +416,7 @@ describe('reconciliation', () => {
     expect(listener).toHaveBeenLastCalledWith([expect.objectContaining({ notes: 'server' })])
   })
 
-  it('brings server-only entries into local storage and tells listeners, on load', async () => {
+  it('restores the server into an empty log that has never synced, and tells listeners, on load', async () => {
     const server = installFakeServer()
     server.entries.set('s', makeEntry('s'))
     const repo = make()
@@ -413,6 +425,55 @@ describe('reconciliation', () => {
     await settle(repo)
     expect(localIds()).toEqual(['s'])
     expect(listener).toHaveBeenCalledWith([expect.objectContaining({ id: 's' })])
+  })
+
+  it('leaves an entry only the server has on the server, rather than adding it to the log', async () => {
+    const server = installFakeServer()
+    server.entries.set('kept', makeEntry('kept'))
+    server.entries.set('removed', makeEntry('removed'))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('kept')]))
+    const repo = make({ reconcileOnLoad: false })
+    const listener = vi.fn()
+    repo.onReconciled(listener)
+    expect(await repo.reconcile()).toBe(true)
+    expect(localIds()).toEqual(['kept'])
+    expect([...server.entries.keys()].sort()).toEqual(['kept', 'removed'])
+    expect(listener).toHaveBeenCalledWith([expect.objectContaining({ id: 'kept' })])
+  })
+
+  it('does not add back an entry removed while the setting was off, despite its stale put', async () => {
+    const server = installFakeServer()
+    server.entries.set('removed', makeEntry('removed'))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('kept')]))
+    localStorage.setItem(
+      PENDING_KEY,
+      JSON.stringify([{ op: 'put', id: 'removed', updatedAt: '2000-01-04T00:00:00.000Z' }]),
+    )
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(localIds()).toEqual(['kept'])
+    expect(server.entries.has('removed')).toBe(true)
+    expect(pending()).toEqual([])
+  })
+
+  it('does not restore when it cannot tell whether this browser has synced', async () => {
+    const server = installFakeServer()
+    server.entries.set('s', makeEntry('s'))
+    const getItem = Storage.prototype.getItem
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (this: Storage, name) {
+      if (name === PENDING_KEY) throw new Error('storage unavailable')
+      return getItem.call(this, name)
+    })
+    await make({ reconcileOnLoad: false }).reconcile()
+    expect(localIds()).toEqual([])
+  })
+
+  it('does not restore into an empty log once this browser has synced', async () => {
+    const server = installFakeServer()
+    server.entries.set('s', makeEntry('s'))
+    localStorage.setItem(PENDING_KEY, '[]')
+    expect(await make({ reconcileOnLoad: false }).reconcile()).toBe(true)
+    expect(localIds()).toEqual([])
+    expect(server.entries.has('s')).toBe(true)
   })
 
   it('tells listeners after a pending replay, and stops after unsubscribe', async () => {
@@ -513,19 +574,25 @@ describe('reconciliation', () => {
     expect(await repo.testConnection()).toEqual({ kind: 'connected' })
   })
 
-  it('still brings server entries in when the server rejects a push, and keeps it pending', async () => {
+  it('still takes a newer server copy when the server rejects a push, and keeps it pending', async () => {
     const server = installFakeServer()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('shared')]))
     server.down = true
     const repo = make({ reconcileOnLoad: false })
     await repo.put(makeEntry('mine'))
     await settle(repo)
     server.down = false
     server.rejectBulk = true
-    server.entries.set('srv', makeEntry('srv'))
+    server.entries.set(
+      'shared',
+      makeEntry('shared', { notes: 'server', updatedAt: '2000-05-01T00:00:00.000Z' }),
+    )
     const listener = vi.fn()
     repo.onReconciled(listener)
     expect(await repo.reconcile()).toBe(false)
-    expect(localIds()).toEqual(['mine', 'srv'])
+    expect(localIds()).toEqual(['mine', 'shared'])
+    const local: Entry[] = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
+    expect(local.find((e) => e.id === 'shared')?.notes).toBe('server')
     expect(listener).toHaveBeenCalledTimes(1)
     expect(pending()).toEqual([{ op: 'put', id: 'mine', updatedAt: '2000-01-04T00:00:00.000Z' }])
     server.rejectBulk = false
@@ -593,7 +660,7 @@ describe('reconciliation', () => {
       expect(pending().map((p: { id: string }) => p.id)).toEqual(['x'])
     })
 
-    it('lets server-only entries reach the app once its operations have replayed', async () => {
+    it('leaves server-only entries on the server once its operations have replayed', async () => {
       const { server, repo } = offlineClearAll()
       server.down = true
       await repo.replaceAll([])
@@ -602,9 +669,12 @@ describe('reconciliation', () => {
       const listener = vi.fn()
       repo.onReconciled(listener)
       expect(await repo.reconcile()).toBe(true)
+      // The log is now empty with nothing pending, which must still not read as a wiped browser.
+      expect(await repo.reconcile()).toBe(true)
       expect(server.entries.has('x')).toBe(false)
-      expect(localIds()).toEqual(['u'])
-      expect(listener).toHaveBeenLastCalledWith([expect.objectContaining({ id: 'u' })])
+      expect(server.entries.has('u')).toBe(true)
+      expect(localIds()).toEqual([])
+      expect(listener).toHaveBeenLastCalledWith([])
     })
   })
 })
@@ -662,7 +732,8 @@ describe('testConnection', () => {
     expect(await repo.testConnection()).toEqual({ kind: 'connected' })
     await vi.waitFor(() => expect(repo.pendingCount()).toBe(0))
     expect(server.entries.has('a')).toBe(true)
-    expect(localIds()).toEqual(['a', 's'])
+    expect(localIds()).toEqual(['a'])
+    expect(server.entries.has('s')).toBe(true)
     expect(listener).toHaveBeenCalled()
   })
 
