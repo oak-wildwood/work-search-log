@@ -82,7 +82,7 @@ function save(next: StorageBackendSettings) {
   const committed: StorageBackendSettings = {
     backend: next.backend,
     serverUrl: next.serverUrl.trim(),
-    token: next.backend === 'local-server' ? next.token : '',
+    token: next.backend === 'local-server' ? next.token.trim() : '',
   }
   state.value = committed
   writeJSON(STORAGE_BACKEND_KEY, committed)

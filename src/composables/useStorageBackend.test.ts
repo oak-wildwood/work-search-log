@@ -75,12 +75,12 @@ describe('useStorageBackend', () => {
     })
   })
 
-  it('saves the choice and trims the address', async () => {
+  it('saves the choice and trims the address and token', async () => {
     const { useStorageBackend } = await load()
     useStorageBackend().save({
       backend: 'local-server',
       serverUrl: '  http://127.0.0.1:9000  ',
-      token: 'tok',
+      token: '  tok  ',
     })
     expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
       backend: 'local-server',

@@ -40,7 +40,7 @@ const consentDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null)
 
 // Which address and token last connected. Not reactive: only `commit()` reads it.
 let testedKey: string | null = null
-const keyOf = () => `${draftUrl.value.trim()}\n${draftToken.value}`
+const keyOf = () => `${draftUrl.value.trim()}\n${draftToken.value.trim()}`
 
 const useServer = computed(() => draftBackend.value === 'local-server')
 const urlError = computed(() => (useServer.value ? validateServerUrl(draftUrl.value) : null))
@@ -51,7 +51,7 @@ const draftsInUse = computed(
     serverActive.value &&
     storage.value.backend === 'local-server' &&
     draftUrl.value.trim() === storage.value.serverUrl &&
-    draftToken.value === storage.value.token,
+    draftToken.value.trim() === storage.value.token,
 )
 
 function reset() {
@@ -113,7 +113,7 @@ async function runTest() {
     // Constructing it sends nothing: only testConnection() below does.
     candidate = new LocalServerRepository({
       baseUrl: draftUrl.value.trim(),
-      token: draftToken.value,
+      token: draftToken.value.trim(),
       reconcileOnLoad: false,
     })
   } catch {
@@ -151,6 +151,7 @@ async function commit(): Promise<boolean> {
   if (!available) return true
   const saved = storage.value
   const url = draftUrl.value.trim()
+  const token = draftToken.value.trim()
 
   if (draftBackend.value === 'browser') {
     if (saved.backend !== 'browser') save({ backend: 'browser', serverUrl: url, token: '' })
@@ -158,7 +159,7 @@ async function commit(): Promise<boolean> {
   }
 
   const unchanged =
-    saved.backend === 'local-server' && saved.serverUrl === url && saved.token === draftToken.value
+    saved.backend === 'local-server' && saved.serverUrl === url && saved.token === token
   if (unchanged) return true
 
   if (urlError.value) {
@@ -179,7 +180,7 @@ async function commit(): Promise<boolean> {
     (saved.backend !== 'local-server' || saved.serverUrl !== url) && entries.value.length > 0
   if (copying && !(await consentDialog.value?.open())) return false
 
-  save({ backend: 'local-server', serverUrl: url, token: draftToken.value })
+  save({ backend: 'local-server', serverUrl: url, token })
   return true
 }
 

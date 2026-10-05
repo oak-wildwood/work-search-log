@@ -20,6 +20,7 @@ const exposed = () => wrapper!.vm.$.exposed as unknown as Exposed
 interface Call {
   method: string
   url: string
+  authorization?: string
 }
 let calls: Call[] = []
 
@@ -32,7 +33,8 @@ function stubFetch(
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
       const method = init.method ?? 'GET'
-      calls.push({ method, url })
+      const authorization = (init.headers as Record<string, string> | undefined)?.Authorization
+      calls.push({ method, url, authorization })
       return handler(method, url, init.body as string | undefined)
     }),
   )
@@ -155,6 +157,20 @@ describe('StorageSettings', () => {
       await mountSection()
       await chooseServer()
       expect(wrapper!.get('[data-testid="storage-token"]').attributes('type')).toBe('password')
+    })
+
+    it('ignores spaces copied along with the token', async () => {
+      healthyServer()
+      await mountSection()
+      await chooseServer(undefined, `  ${TOKEN}  `)
+      await press()
+      expect(calls.map((c) => c.authorization)).toEqual([`Bearer ${TOKEN}`])
+      expect(statusText()).toBe('Connected')
+      // The same token with different spacing needs no second test.
+      await wrapper!.get('[data-testid="storage-token"]').setValue(TOKEN)
+      expect(statusText()).toBe('Connected')
+      expect(await exposed().commit()).toBe(true)
+      expect(saved()?.token).toBe(TOKEN)
     })
   })
 
@@ -368,6 +384,8 @@ describe('StorageSettings', () => {
       expect(statusText()).toBe('Not tested yet')
       await wrapper!.get('[data-testid="storage-url"]').setValue(` ${DEFAULT_SERVER_URL} `)
       expect(statusText()).toMatch(/^In use/)
+      await wrapper!.get('[data-testid="storage-token"]').setValue(` ${TOKEN} `)
+      expect(statusText()).toMatch(/^In use/)
       await wrapper!.get('[data-testid="storage-token"]').setValue('another-synthetic-token')
       expect(statusText()).toBe('Not tested yet')
     })
@@ -498,6 +516,7 @@ describe('StorageSettings', () => {
         token: TOKEN,
       })
       await mountSection()
+      await wrapper!.get('[data-testid="storage-token"]').setValue(` ${TOKEN} `)
       expect(await exposed().commit()).toBe(true)
       expect(calls).toEqual([])
     })
