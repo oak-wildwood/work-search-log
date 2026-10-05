@@ -657,6 +657,46 @@ describe('reconciliation', () => {
   })
 })
 
+describe('catching up', () => {
+  it('tells subscribers once a reconciliation leaves the server with every entry, not before', async () => {
+    const server = installFakeServer()
+    server.down = true
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('a')]))
+    const repo = make()
+    let caughtUp = 0
+    repo.onCaughtUp(() => caughtUp++)
+    await settle(repo)
+    expect(caughtUp).toBe(0)
+    // Nothing is pending, yet the server lacks the entry.
+    expect(repo.pendingCount()).toBe(0)
+    server.down = false
+    expect(await repo.reconcile()).toBe(true)
+    expect([...server.entries.keys()]).toEqual(['a'])
+    expect(caughtUp).toBe(1)
+  })
+
+  it('is not caught up when the server rejects a push', async () => {
+    const server = installFakeServer()
+    server.rejectBulk = true
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([makeEntry('a')]))
+    const repo = make({ reconcileOnLoad: false })
+    let caughtUp = 0
+    repo.onCaughtUp(() => caughtUp++)
+    expect(await repo.reconcile()).toBe(false)
+    expect(caughtUp).toBe(0)
+  })
+
+  it('stops telling a subscriber that unsubscribed', async () => {
+    installFakeServer()
+    const repo = make({ reconcileOnLoad: false })
+    let caughtUp = 0
+    const unsubscribe = repo.onCaughtUp(() => caughtUp++)
+    unsubscribe()
+    expect(await repo.reconcile()).toBe(true)
+    expect(caughtUp).toBe(0)
+  })
+})
+
 describe('testConnection', () => {
   it('reports connected', async () => {
     installFakeServer()

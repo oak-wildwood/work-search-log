@@ -36,6 +36,7 @@ const state = ref<StorageBackendSettings>(load())
 
 const serverActive = ref(false)
 const pendingCount = ref(0)
+const caughtUp = ref(false)
 
 /** A plain-language reason the address can't be used, or null when it can. */
 export function validateServerUrl(raw: string): string | null {
@@ -62,6 +63,7 @@ export function validateServerUrl(raw: string): string | null {
 export function createEntryRepository(): EntryRepository {
   serverActive.value = false
   pendingCount.value = 0
+  caughtUp.value = false
   const { backend, serverUrl, token } = state.value
   if (backend === 'local-server' && !DEMO_DATA_ENABLED) {
     try {
@@ -69,6 +71,7 @@ export function createEntryRepository(): EntryRepository {
       serverActive.value = true
       pendingCount.value = server.pendingCount()
       server.onPendingChange((count) => (pendingCount.value = count))
+      server.onCaughtUp(() => (caughtUp.value = true))
       return server
     } catch {
       // fall through to browser storage
@@ -96,6 +99,8 @@ export function useStorageBackend() {
     /** Whether this page load is actually storing through the server. */
     serverActive: readonly(serverActive),
     pendingCount: readonly(pendingCount),
+    /** Whether this page load has confirmed the server holds every entry in the log. */
+    caughtUp: readonly(caughtUp),
     save,
   }
 }

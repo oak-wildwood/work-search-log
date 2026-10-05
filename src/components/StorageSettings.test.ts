@@ -338,23 +338,57 @@ describe('StorageSettings', () => {
       expect(statusText()).toBe('Not tested yet')
     })
 
-    it('shows the pending count of a server that is in use', async () => {
+    it('says No changes waiting once this load has caught the server up', async () => {
       useStorageBackend().save({
         backend: 'local-server',
         serverUrl: DEFAULT_SERVER_URL,
         token: TOKEN,
       })
-      localStorage.setItem(
-        PENDING_KEY,
-        JSON.stringify([{ op: 'remove', id: 'a', updatedAt: '2000-01-01T00:00:00.000Z' }]),
-      )
-      // The server is down, so the load reconciliation leaves the change pending.
+      healthyServer()
+      createEntryRepository()
+      await mountSection()
+      await vi.waitFor(() => expect(statusText()).toBe('In use. No changes waiting.'))
+      expect(wrapper!.find('[data-testid="storage-catchup-help"]').exists()).toBe(false)
+    })
+
+    it('never says No changes waiting before this load has reached the server', async () => {
+      useStorageBackend().save({
+        backend: 'local-server',
+        serverUrl: DEFAULT_SERVER_URL,
+        token: TOKEN,
+      })
+      logSyntheticEntry()
+      // The server is down, so nothing is pending, yet it lacks the entry.
       stubFetch(() => {
         throw new TypeError('Failed to fetch')
       })
       createEntryRepository()
       await mountSection()
+      await flushPromises()
+      expect(useStorageBackend().pendingCount.value).toBe(0)
+      expect(statusText()).toBe('In use. Not caught up with the server yet.')
+      expect(wrapper!.get('[data-testid="storage-catchup-help"]').text()).toContain(
+        'the next time you open the app while the server is running',
+      )
+    })
+
+    it('shows the pending count of a server this load has caught up', async () => {
+      useStorageBackend().save({
+        backend: 'local-server',
+        serverUrl: DEFAULT_SERVER_URL,
+        token: TOKEN,
+      })
+      healthyServer()
+      const repository = createEntryRepository()
+      await vi.waitFor(() => expect(useStorageBackend().caughtUp.value).toBe(true))
+      // The server then goes down, so this change stays pending.
+      stubFetch(() => {
+        throw new TypeError('Failed to fetch')
+      })
+      await repository.remove('a')
+      await mountSection()
       expect(statusText()).toBe('In use. 1 change waiting for the server.')
+      expect(wrapper!.find('[data-testid="storage-catchup-help"]').exists()).toBe(false)
     })
 
     it('does not say In use for a server turned on this session, before the next load', async () => {

@@ -149,6 +149,20 @@ describe('createEntryRepository', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('is caught up only once this load has reached the server, and starts over on the next', async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ backend: 'local-server', serverUrl: DEFAULT_SERVER_URL, token: 'tok' }),
+    )
+    const { createEntryRepository, useStorageBackend } = await load()
+    const { caughtUp } = useStorageBackend()
+    expect(caughtUp.value).toBe(false)
+    createEntryRepository()
+    await vi.waitFor(() => expect(caughtUp.value).toBe(true))
+    createEntryRepository()
+    expect(caughtUp.value).toBe(false)
+  })
+
   it('reports the pending count of the live server', async () => {
     localStorage.setItem(
       KEY,

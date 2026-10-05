@@ -28,7 +28,7 @@ const CHROME_REALLOW =
   'To allow it again, click the site icon at the left of Chrome’s address bar, choose Site settings, and set Apps on device to Allow.'
 
 const { entries } = useEntries()
-const { storage, available, serverActive, pendingCount, save } = useStorageBackend()
+const { storage, available, serverActive, pendingCount, caughtUp, save } = useStorageBackend()
 
 // Edited locally and only committed by `commit()`, so dismissing leaves nothing behind.
 const draftBackend = ref<Backend>('browser')
@@ -53,6 +53,8 @@ const draftsInUse = computed(
     draftUrl.value.trim() === storage.value.serverUrl &&
     draftToken.value.trim() === storage.value.token,
 )
+// Until this load reaches the server, it may lack entries the pending count leaves out.
+const notCaughtUp = computed(() => draftsInUse.value && !caughtUp.value)
 
 function reset() {
   draftBackend.value = storage.value.backend
@@ -92,6 +94,7 @@ const statusText = computed(() => {
     case 'malformed':
       return 'Error: the server sent an unexpected response'
     default:
+      if (notCaughtUp.value) return 'In use. Not caught up with the server yet.'
       if (draftsInUse.value) {
         return pendingCount.value === 0
           ? 'In use. No changes waiting.'
@@ -251,6 +254,11 @@ defineExpose({ reset, commit })
 
       <p v-if="status.kind === 'waiting'" class="help" data-testid="storage-waiting-help">
         Chrome is asking whether this site may “{{ CHROME_PROMPT }}”. Choose Allow to carry on.
+      </p>
+
+      <p v-if="notCaughtUp" class="help" data-testid="storage-catchup-help">
+        Anything the server is missing is sent the next time you open the app while the server is
+        running.
       </p>
 
       <div v-if="showHelp" class="help" data-testid="storage-help">

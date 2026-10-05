@@ -104,6 +104,7 @@ export class LocalServerRepository implements EntryRepository {
   private readonly timeoutMs: number
   private readonly local = new LocalStorageEntryRepository()
   private readonly pendingListeners = new Set<(count: number) => void>()
+  private readonly caughtUpListeners = new Set<() => void>()
   // Network work runs one at a time, in the order it was asked for.
   private chain: Promise<unknown> = Promise.resolve()
 
@@ -123,6 +124,17 @@ export class LocalServerRepository implements EntryRepository {
   onPendingChange(listener: (count: number) => void): () => void {
     this.pendingListeners.add(listener)
     return () => this.pendingListeners.delete(listener)
+  }
+
+  /**
+   * Subscribe to each reconciliation that leaves the server holding every entry in the
+   * log. Until the first one, the server may lack entries no pending operation covers:
+   * ones logged while the setting was off, or never copied. After it, `pendingCount()`
+   * alone says what the server is missing. The returned function unsubscribes.
+   */
+  onCaughtUp(listener: () => void): () => void {
+    this.caughtUpListeners.add(listener)
+    return () => this.caughtUpListeners.delete(listener)
   }
 
   pendingCount(): number {
@@ -356,7 +368,9 @@ export class LocalServerRepository implements EntryRepository {
       }
     }
     this.clearPending(pending.filter((op) => !unresolved.has(op.id)))
-    return unresolved.size === 0
+    if (unresolved.size > 0) return false
+    for (const listener of [...this.caughtUpListeners]) listener()
+    return true
   }
 
   // ---- pending queue ----
