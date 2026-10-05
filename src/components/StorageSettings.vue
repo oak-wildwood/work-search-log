@@ -258,7 +258,7 @@ defineExpose({ reset, commit })
 
       <p v-if="notCaughtUp" class="help" data-testid="storage-catchup-help">
         Anything the server is missing is sent the next time you open the app while the server is
-        running.
+        running. If this doesn't change, press Test connection to see why.
       </p>
 
       <div v-if="showHelp" class="help" data-testid="storage-help">

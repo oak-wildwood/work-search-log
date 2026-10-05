@@ -367,9 +367,10 @@ describe('StorageSettings', () => {
       await flushPromises()
       expect(useStorageBackend().pendingCount.value).toBe(0)
       expect(statusText()).toBe('In use. Not caught up with the server yet.')
-      expect(wrapper!.get('[data-testid="storage-catchup-help"]').text()).toContain(
-        'the next time you open the app while the server is running',
-      )
+      const help = wrapper!.get('[data-testid="storage-catchup-help"]').text()
+      expect(help).toContain('the next time you open the app while the server is running')
+      // Chrome blocking the site also stops the catch-up, and only Test connection shows that.
+      expect(help).toContain('press Test connection to see why')
     })
 
     it('shows the pending count of a server this load has caught up', async () => {
