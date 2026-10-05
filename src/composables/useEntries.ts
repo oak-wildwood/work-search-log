@@ -2,11 +2,8 @@ import { ref } from 'vue'
 import type { Entry, EntryDraft } from '../types'
 import { createSeedEntries } from '../lib/seedEntries'
 import { DEMO_DATA_ENABLED } from '../lib/demoMode'
-import {
-  LocalStorageEntryRepository,
-  isLaterTimestamp as isLater,
-  type EntryRepository,
-} from '../lib/entryRepository'
+import type { EntryRepository } from '../lib/entryRepository'
+import { createEntryRepository } from './useStorageBackend'
 
 function makeId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -36,13 +33,7 @@ export function createEntriesStore(repository: EntryRepository) {
   // (it is skipped if the claimant changes something first, and a failing list()
   // never applies), and a whole-log write would then delete what the backend has
   // and memory doesn't.
-  // An adapter with onReconciled is also not hydrated until its first reconciled
-  // list has been merged, even with a synchronous read: loadSync only sees a local
-  // mirror that may lack what the backend holds.
-  let hydrated = repository.loadSync !== undefined && repository.onReconciled === undefined
-  // Ids the claimant removed this session, so a reconciled list (which may still
-  // carry them) never brings one back.
-  const removedThisSession = new Set<string>()
+  let hydrated = repository.loadSync !== undefined
   // After a failed write the repository may be missing entries that exist only in
   // memory. Writing just the next change would succeed, clear `saveError`, and
   // leave them unsaved, so once `hydrated` the next write saves the whole log
@@ -88,26 +79,6 @@ export function createEntriesStore(repository: EntryRepository) {
       .catch(() => {})
   }
 
-  // Merges what the backend holds into memory. Never removes anything and never
-  // writes back: the adapter has already stored this list.
-  repository.onReconciled?.((list) => {
-    const next = [...entries.value]
-    let changed = false
-    for (const incoming of list) {
-      if (removedThisSession.has(incoming.id)) continue
-      const index = next.findIndex((e) => e.id === incoming.id)
-      if (index === -1) {
-        next.push({ ...incoming })
-        changed = true
-      } else if (isLater(incoming.updatedAt, next[index].updatedAt)) {
-        next[index] = { ...incoming }
-        changed = true
-      }
-    }
-    if (changed) entries.value = next
-    hydrated = true
-  })
-
   function addEntry(draft: EntryDraft) {
     const now = new Date().toISOString()
     const entry: Entry = { ...draft, id: makeId(), createdAt: now, updatedAt: now }
@@ -126,21 +97,16 @@ export function createEntriesStore(repository: EntryRepository) {
   }
 
   function removeEntry(id: string) {
-    removedThisSession.add(id)
     entries.value = entries.value.filter((e) => e.id !== id)
     persist(() => repository.remove(id))
   }
 
   function clearAll() {
-    for (const e of entries.value) removedThisSession.add(e.id)
     entries.value = []
     persist(() => repository.replaceAll([]), true)
   }
 
   function replaceAll(next: Entry[]) {
-    for (const e of next) removedThisSession.delete(e.id)
-    const kept = new Set(next.map((e) => e.id))
-    for (const e of entries.value) if (!kept.has(e.id)) removedThisSession.add(e.id)
     entries.value = next
     persist(() => repository.replaceAll(next), true)
   }
@@ -158,8 +124,9 @@ export function createEntriesStore(repository: EntryRepository) {
 }
 
 // Module-level state: every component calling useEntries() shares one store,
-// with no need for provide/inject or a state-management library.
-const store = createEntriesStore(new LocalStorageEntryRepository())
+// with no need for provide/inject or a state-management library. The repository is
+// chosen once, here, so a backend change in Preferences applies on the next load.
+const store = createEntriesStore(createEntryRepository())
 
 export function useEntries() {
   return store

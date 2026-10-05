@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { DOMWrapper, mount, type VueWrapper } from '@vue/test-utils'
+import { DOMWrapper, flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import PreferencesDialog from './PreferencesDialog.vue'
 import { useSettings } from '../composables/useSettings'
+import { useStorageBackend } from '../composables/useStorageBackend'
+import { DEFAULT_SERVER_URL } from '../lib/localServerRepository'
 import { resolveRequirement } from '../lib/requirements'
 import { currentWeekKey } from '../lib/weeks'
 
@@ -166,6 +168,63 @@ describe('PreferencesDialog', () => {
 
       expect(wrapper.emitted('close')).toBeTruthy()
       expect(settings.value.onboardedAt).not.toBeNull()
+    })
+  })
+  describe('storage section', () => {
+    afterEach(() => {
+      useStorageBackend().save({ backend: 'browser', serverUrl: DEFAULT_SERVER_URL, token: '' })
+      localStorage.removeItem('work-search-log:storage:v1')
+    })
+
+    it('is left out of a first run, which still saves and closes', async () => {
+      const { settings } = useSettings()
+      wrapper = mount(PreferencesDialog, { props: { open: true, firstRun: true } })
+      await nextTick()
+      expect(document.body.querySelector('fieldset.storage')).toBeNull()
+
+      await body().get('input[type="text"]').setValue('Jordan')
+      await body().get('.primary').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.emitted('close')).toBeTruthy()
+      expect(settings.value.name).toBe('Jordan')
+    })
+
+    it('is shown on later visits', async () => {
+      wrapper = mount(PreferencesDialog, { props: { open: true } })
+      await nextTick()
+      expect(document.body.querySelector('fieldset.storage')).not.toBeNull()
+    })
+
+    it('keeps the dialog open and saves nothing while a server can not be turned on', async () => {
+      const { settings } = useSettings()
+      const nameBefore = settings.value.name
+      wrapper = mount(PreferencesDialog, { props: { open: true } })
+      await nextTick()
+
+      await body().get('input[type="text"]').setValue('Someone Else')
+      await body().get('input[value="local-server"]').setValue(true)
+      await body().get('.primary').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.emitted('close')).toBeFalsy()
+      expect(settings.value.name).toBe(nameBefore)
+      expect(body().get('[data-testid="storage-error"]').text()).toMatch(/test the connection/i)
+    })
+
+    it('says so in the privacy note when the local server is on', async () => {
+      wrapper = mount(PreferencesDialog, { props: { open: true } })
+      await nextTick()
+      expect(body().get('.privacy').text()).toContain('this browser only')
+
+      useStorageBackend().save({
+        backend: 'local-server',
+        serverUrl: DEFAULT_SERVER_URL,
+        token: 'synthetic-token-0000',
+      })
+      await nextTick()
+      expect(body().get('.privacy').text()).toContain('second copy on the local server')
+      expect(body().get('.privacy').text()).not.toContain('this browser only')
     })
   })
 })

@@ -21,13 +21,6 @@ export interface EntryRepository {
    * the composable hydrates from `list()` once it settles.
    */
   loadSync?(): Entry[] | null
-  /**
-   * Optional. For adapters whose backing store can gain entries after `loadSync`
-   * returned (a server reconciled in the background). The listener gets the full
-   * reconciled list each time; the returned function unsubscribes. It is a pull of
-   * what the backend holds, never an instruction to delete from memory.
-   */
-  onReconciled?(listener: (entries: Entry[]) => void): () => void
 }
 
 /** Whether timestamp `a` is strictly after `b`; unparseable values compare as strings. */

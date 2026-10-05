@@ -12,6 +12,10 @@ export const PENDING_KEY = `work-search-log:pending:v1${STORAGE_SUFFIX}`
 const LOOPBACK_HOSTS = ['127.0.0.1', 'localhost', '[::1]']
 const DEFAULT_TIMEOUT_MS = 5000
 
+/** What the companion server listens on unless it is told otherwise. */
+export const DEFAULT_SERVER_PORT = 8765
+export const DEFAULT_SERVER_URL = `http://127.0.0.1:${DEFAULT_SERVER_PORT}`
+
 export type ConnectionResult =
   { kind: 'connected' } | { kind: 'unauthorized' } | { kind: 'unreachable' } | { kind: 'malformed' }
 
@@ -91,22 +95,19 @@ type Reply = { ok: boolean; status: number; text: string }
  * this machine. The server being down, refused, or answering nonsense never loses
  * or blocks a write: the change stays local and is queued as pending until a later
  * successful call replays it. "Unavailable" is never read as "the server is empty".
+ *
+ * One way only: nothing the server holds is ever written to the log. Two-way sync
+ * waits for a decision of its own (ADR 0008).
  */
 export class LocalServerRepository implements EntryRepository {
   private readonly base: string
   private readonly token: string
   private readonly timeoutMs: number
   private readonly local = new LocalStorageEntryRepository()
-  private readonly reconciledListeners = new Set<(entries: Entry[]) => void>()
   private readonly pendingListeners = new Set<(count: number) => void>()
+  private readonly caughtUpListeners = new Set<() => void>()
   // Network work runs one at a time, in the order it was asked for.
   private chain: Promise<unknown> = Promise.resolve()
-  // The operations (as `key`s) each replaceAll queued, for as long as any of them is
-  // still pending. While one is, reconciliation won't pull server-only entries in, so
-  // a "clear all" made while offline doesn't undo itself. It ends when the operations
-  // have been replayed, not when one particular request succeeds, so a failed attempt
-  // can't hold server-only entries back for the rest of the session.
-  private replaces: Set<string>[] = []
 
   constructor(options: LocalServerOptions) {
     if (DEMO_DATA_ENABLED) throw new Error('The local server is never used in a demo build')
@@ -120,15 +121,21 @@ export class LocalServerRepository implements EntryRepository {
     return this.local.loadSync()
   }
 
-  onReconciled(listener: (entries: Entry[]) => void): () => void {
-    this.reconciledListeners.add(listener)
-    return () => this.reconciledListeners.delete(listener)
-  }
-
   /** Subscribe to changes of `pendingCount()`. The returned function unsubscribes. */
   onPendingChange(listener: (count: number) => void): () => void {
     this.pendingListeners.add(listener)
     return () => this.pendingListeners.delete(listener)
+  }
+
+  /**
+   * Subscribe to each reconciliation that leaves the server holding every entry in the
+   * log. Until the first one, the server may lack entries no pending operation covers:
+   * ones logged while the setting was off, or never copied. After it, `pendingCount()`
+   * alone says what the server is missing. The returned function unsubscribes.
+   */
+  onCaughtUp(listener: () => void): () => void {
+    this.caughtUpListeners.add(listener)
+    return () => this.caughtUpListeners.delete(listener)
   }
 
   pendingCount(): number {
@@ -147,27 +154,27 @@ export class LocalServerRepository implements EntryRepository {
     }
   }
 
-  async testConnection(): Promise<ConnectionResult> {
+  /**
+   * `reconcile: false` probes without copying anything: reconciliation pushes every
+   * entry the server lacks, which a caller asking for consent first must not trigger.
+   */
+  async testConnection(options: { reconcile?: boolean } = {}): Promise<ConnectionResult> {
     // The only call allowed to raise the permission prompt, and so never timed out
     // while it may be open: aborting would report "unreachable" before it is read.
     const prompting = (await this.permission()) === 'prompt'
     const { result } = await this.fetchList(!prompting)
     // This is the call that gets the claimant to allow access, so whatever was
     // written while it was blocked goes now rather than at the next write.
-    if (result.kind === 'connected') void this.reconcile()
+    if (result.kind === 'connected' && (options.reconcile ?? true)) void this.reconcile()
     return result
   }
 
-  /**
-   * Replays pending operations and merges with the server. False if a call failed,
-   * though whatever the server holds still reaches the log.
-   */
+  /** Replays pending operations and copies what the server lacks. False if a call failed. */
   reconcile(): Promise<boolean> {
     return this.enqueue(() => this.reconcileNow())
   }
 
   async list(): Promise<Entry[]> {
-    await this.enqueue(() => this.reconcileNow())
     return (await this.local.list()).map((e) => ({ ...e }))
   }
 
@@ -217,7 +224,6 @@ export class LocalServerRepository implements EntryRepository {
         .map((e): PendingOp => ({ op: 'remove', id: e.id, updatedAt: now })),
     ]
     const queued = this.setPending(ops)
-    if (ops.length > 0) this.replaces.push(new Set(ops.map(key)))
     void this.enqueue(async () => {
       if (!(await this.networkAllowed())) return
       const { result, entries: server } = await this.fetchList(true)
@@ -324,50 +330,36 @@ export class LocalServerRepository implements EntryRepository {
     if (this.pendingCount() > 0) await this.reconcileNow()
   }
 
-  /** Must run inside the queue. Returns whether a full reconciliation completed. */
+  /** Must run inside the queue. Returns whether the server now has every change. */
   private async reconcileNow(): Promise<boolean> {
     if (!(await this.networkAllowed())) return false
     const { result, entries: server } = await this.fetchList(true)
     if (result.kind !== 'connected' || !server) return false
 
+    // One way: the server's list only decides what to send. An entry only the server
+    // has is left there, since it was removed here or reached the server some other way.
     const pending = this.readPending()
-    const pendingById = new Map(pending.map((p) => [p.id, p]))
-    const localAtStart = this.local.loadSync() ?? []
-    const localById = new Map(localAtStart.map((e) => [e.id, e]))
-    const serverById = new Map(server.map((e) => [e.id, e]))
-    const push: Entry[] = []
-    const remove: string[] = []
-    const take: Entry[] = []
-    const serverOnly: Entry[] = []
+    const pendingById = new Map(pending.map((op) => [op.id, op]))
+    const logEntries = this.local.loadSync() ?? []
+    const logIds = new Set(logEntries.map((entry) => entry.id))
+    const serverById = new Map(server.map((entry) => [entry.id, entry]))
+    // A change made here is replayed even over a newer server copy. Otherwise an entry
+    // is sent when its copy here is newer; one with no updatedAt (a backup import
+    // allows one) counts as oldest.
+    const push = logEntries.filter((entry) => {
+      const serverCopy = serverById.get(entry.id)
+      if (!serverCopy || pendingById.has(entry.id)) return true
+      return isLaterTimestamp(stampOf(entry, ''), stampOf(serverCopy, ''))
+    })
+    const remove = pending
+      .filter((op) => op.op === 'remove' && !logIds.has(op.id) && serverById.has(op.id))
+      .map((op) => op.id)
 
-    for (const id of new Set([...localById.keys(), ...serverById.keys()])) {
-      const l = localById.get(id)
-      const s = serverById.get(id)
-      const p = pendingById.get(id)
-      if (p?.op === 'remove') {
-        if (!s) continue
-        if (isLaterTimestamp(s.updatedAt, p.updatedAt)) take.push(s)
-        else remove.push(id)
-      } else if (l && !s) {
-        push.push(l)
-      } else if (!l && s) {
-        serverOnly.push(s)
-      } else if (l && s) {
-        // An entry with no updatedAt (a backup import allows one) is as new as its
-        // pending put, or oldest of all when there is none.
-        const localStamp = stampOf(l, p?.updatedAt ?? '')
-        const serverStamp = stampOf(s, '')
-        if (isLaterTimestamp(serverStamp, localStamp)) take.push(s)
-        else if (isLaterTimestamp(localStamp, serverStamp)) push.push(l)
-      }
-    }
-
-    // A failed call leaves its operations pending but must not keep what the server
-    // holds from reaching the log: one entry the server rejects would block every pull.
+    // A failed call leaves its operations pending for the next attempt.
     const unresolved = new Set<string>()
     if (push.length > 0) {
       const res = await this.send('POST', '/wsl/entries:bulk', { entries: push })
-      if (!res?.ok) for (const e of push) unresolved.add(e.id)
+      if (!res?.ok) for (const entry of push) unresolved.add(entry.id)
     }
     for (const [index, id] of remove.entries()) {
       const res = await this.send('DELETE', entryPath(id))
@@ -376,43 +368,10 @@ export class LocalServerRepository implements EntryRepository {
         break
       }
     }
-    const resolved = pending.filter((p) => !unresolved.has(p.id))
-    if (!this.replaceStillPending(new Set(resolved.map(key)))) take.push(...serverOnly)
-
-    // Commit against the local log as it is now: the claimant may have written
-    // while the network calls were in flight, and that must not be undone.
-    const now = this.local.loadSync() ?? []
-    const nowById = new Map(now.map((e) => [e.id, e]))
-    const pendingNow = new Map(this.readPending().map((p) => [p.id, p]))
-    const merged = [...now]
-    for (const s of take) {
-      const current = nowById.get(s.id)
-      const start = localById.get(s.id)
-      if (!current) {
-        // Gone now: only bring it back if the claimant didn't remove it meanwhile.
-        const latest = pendingNow.get(s.id)
-        const snapshot = pendingById.get(s.id)
-        const removedDuring =
-          latest?.op === 'remove' && (!snapshot || key(latest) !== key(snapshot))
-        if (!removedDuring) merged.push(s)
-      } else if (start && current.updatedAt === start.updatedAt) {
-        merged[merged.indexOf(current)] = s
-      }
-    }
-    try {
-      await this.local.replaceAll(merged)
-    } catch {
-      return false
-    }
-    this.clearPending(resolved)
-    for (const listener of [...this.reconciledListeners]) listener(merged.map((e) => ({ ...e })))
-    return unresolved.size === 0
-  }
-
-  /** Whether a replaceAll still has an operation that `cleared` (as keys) won't remove. */
-  private replaceStillPending(cleared: Set<string>): boolean {
-    const live = this.readPending().filter((p) => !cleared.has(key(p)))
-    return this.replaces.some((replace) => live.some((p) => replace.has(key(p))))
+    this.clearPending(pending.filter((op) => !unresolved.has(op.id)))
+    if (unresolved.size > 0) return false
+    for (const listener of [...this.caughtUpListeners]) listener()
+    return true
   }
 
   // ---- pending queue ----
@@ -442,8 +401,6 @@ export class LocalServerRepository implements EntryRepository {
   private clearPending(done: PendingOp[]) {
     const sent = new Set(done.map(key))
     this.writePending(this.readPending().filter((p) => !sent.has(key(p))))
-    const live = new Set(this.readPending().map(key))
-    this.replaces = this.replaces.filter((replace) => [...replace].some((k) => live.has(k)))
   }
 
   /** Listeners hear only about a count that was actually stored. */
