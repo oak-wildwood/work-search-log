@@ -28,7 +28,8 @@ document submitted to a government agency.
 The one exception is **Follow up** on an existing Entry: it copies the fields that identify that
 job (employer, title, address, phone, contact name) and links the new Entry to it, while the date,
 activity, method, result and notes start blank. Nothing else may copy from earlier Entries. See
-[ADR 0009](./docs/decisions/0009-follow-up-copies-the-jobs-own-fields.md).
+[ADR 0009](./docs/decisions/0009-follow-up-copies-the-jobs-own-fields.md). It is decided but not built
+yet, so don't assume `linkedTo` or the action exists in `src/`.
 
 The one seeded fixture that exists (`src/lib/seedEntries.ts`) holds sample entries and the demo
 profile they belong to — `Test User`, `TX`, and a weekly requirement of 3. Both are fenced behind
