@@ -25,6 +25,11 @@ entries. Prefilling the claimant's _own_ profile data (their name) is fine. Inve
 employer, date, or activity is not, under any framing — the entry would be a fabricated record in a
 document submitted to a government agency.
 
+The one exception is **Follow up** on an existing Entry: it copies the fields that identify that
+job (employer, title, address, phone, contact name) and links the new Entry to it, while the date,
+activity, method, result and notes start blank. Nothing else may copy from earlier Entries. See
+[ADR 0009](./docs/decisions/0009-follow-up-copies-the-jobs-own-fields.md).
+
 The one seeded fixture that exists (`src/lib/seedEntries.ts`) holds sample entries and the demo
 profile they belong to — `Test User`, `TX`, and a weekly requirement of 3. Both are fenced behind
 the single flag in `src/lib/demoMode.ts`: `import.meta.env.DEV` or an explicit `VITE_DEMO_DATA=1`

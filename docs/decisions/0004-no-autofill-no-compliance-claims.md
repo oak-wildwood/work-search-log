@@ -50,6 +50,8 @@ Two hard rules, enforced in code and in review, not just in prose:
   met week, autofill from a resume — are out of scope permanently, not just deprioritized.
 - Any change to `EntryForm.vue`, `WeekGroup.vue`, or copy anywhere in the app should be checked
   against these two rules before merging, regardless of how small it looks.
+- [ADR 0009](./0009-follow-up-copies-the-jobs-own-fields.md) amends the first rule for one case:
+  Follow up copies the fields that identify a job from the Entry the claimant clicked.
 - If a future contributor wants either behavior, the answer is: read this record, and if the
   disagreement is genuine, open a new one that supersedes it rather than eroding this one edit by
   edit.
