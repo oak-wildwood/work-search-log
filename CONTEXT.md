@@ -22,7 +22,8 @@ An Entry that concerns the same job as an earlier one, created with **Follow up*
 Entry. It stores the earlier Entry's id in `linkedTo`. The link always points at the Entry the chain
 started from, so following up on a follow-up links to the original. Any Activity can be linked: a
 follow-up, an interview, a recruiter call. The link says which job, never what the Activity counts
-as ([ADR 0009](./docs/decisions/0009-follow-up-copies-the-jobs-own-fields.md)).
+as ([ADR 0009](./docs/decisions/0009-follow-up-copies-the-jobs-own-fields.md)). Decided, not
+built yet: nothing in `src/` reads or writes `linkedTo` until that work lands.
 _Avoid_: Child entry, thread, related entry, follow-up entry (a Linked entry need not be a
 follow-up)
 
