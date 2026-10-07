@@ -17,9 +17,11 @@ from prior entries." Copying fields from an earlier Entry reads like that, so th
 Every Entry that names an employer has a **Follow up** action. It opens the form for a new Entry
 with:
 
-- **Copied, marked and editable:** employer, job title, address, phone and contact name. Each is
-  marked as coming from the earlier Entry and its date, and can be changed before saving.
-- **Blank:** date, activity, contact method, result and notes. These describe the new activity,
+- **Copied, marked and editable:** `employer`, `jobType` (the job title), `address`, `phone`,
+  `contactName` and `contract`. These describe the job, not the activity. Each is marked as coming
+  from the earlier Entry and its date, and can be changed before saving.
+- **Blank:** `date`, `activityId` and `activity`, `siteAppliedOn`, `contactMethod`, `result` and
+  `notes`. These describe the new activity (`siteAppliedOn` says where an application was made),
   so only the claimant can supply them. The activity is picked from the state's usual list; there
   is no follow-up activity type and no config field that preselects one.
 - **A link:** the new Entry stores `linkedTo`, the id of the Entry the chain started from. Follow

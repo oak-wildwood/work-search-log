@@ -26,8 +26,8 @@ employer, date, or activity is not, under any framing — the entry would be a f
 document submitted to a government agency.
 
 The one exception is **Follow up** on an existing Entry: it copies the fields that identify that
-job (employer, title, address, phone, contact name) and links the new Entry to it, while the date,
-activity, method, result and notes start blank. Nothing else may copy from earlier Entries. See
+job (`employer`, `jobType`, `address`, `phone`, `contactName`, `contract`) and links the new Entry
+to it, while every other field starts blank. Nothing else may copy from earlier Entries. See
 [ADR 0009](./docs/decisions/0009-follow-up-copies-the-jobs-own-fields.md). It is decided but not built
 yet, so don't assume `linkedTo` or the action exists in `src/`.
 
