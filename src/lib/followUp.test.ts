@@ -26,7 +26,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
 
 describe('followUpFields', () => {
   it("copies only the job's own fields, and links to the source", () => {
-    expect(followUpFields(entry(), [])).toEqual({
+    expect(followUpFields(entry())).toEqual({
       employer: 'Acme Robotics',
       jobType: 'Frontend Engineer',
       address: 'https://acme.example/jobs/1',
@@ -40,23 +40,17 @@ describe('followUpFields', () => {
   it('reads an entry that predates the contract flag as not contract', () => {
     const legacy = entry()
     delete legacy.contract
-    expect(followUpFields(legacy, []).contract).toBe(false)
+    expect(followUpFields(legacy).contract).toBe(false)
   })
 })
 
 describe('followUpLinkTarget', () => {
   it('links a follow-up on a follow-up to the original, never one level deeper', () => {
-    const original = entry()
-    expect(followUpLinkTarget(entry({ id: 'second', linkedTo: 'app' }), [original])).toBe('app')
-  })
-
-  it('links to the clicked entry when the original is no longer in the log', () => {
-    const second = entry({ id: 'second', linkedTo: 'app' })
-    expect(followUpLinkTarget(second, [second])).toBe('second')
+    expect(followUpLinkTarget(entry({ id: 'second', linkedTo: 'app' }))).toBe('app')
   })
 
   it('links to the entry itself when it is not linked', () => {
-    expect(followUpLinkTarget(entry(), [])).toBe('app')
+    expect(followUpLinkTarget(entry())).toBe('app')
   })
 })
 

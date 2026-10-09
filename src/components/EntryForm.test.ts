@@ -3,7 +3,6 @@ import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import EntryForm from './EntryForm.vue'
 import { useSettings } from '../composables/useSettings'
-import { useEntries } from '../composables/useEntries'
 import type { Entry, EntryDraft } from '../types'
 import { toLocalISODate } from '../lib/weeks'
 
@@ -30,7 +29,6 @@ function makeEntry(overrides: Partial<Entry> = {}): Entry {
 
 afterEach(() => {
   useSettings().setStateCode(null)
-  useEntries().clearAll()
 })
 
 describe('EntryForm', () => {
@@ -257,7 +255,6 @@ describe('EntryForm', () => {
 
     it('links a follow-up on a follow-up to the original entry', async () => {
       const second = makeEntry({ id: 'second', employer: 'Acme Robotics', linkedTo: 'app' })
-      useEntries().replaceAll([source(), second])
       const wrapper = mount(EntryForm, { props: { followingUp: second } })
       await nextTick()
       await wrapper.get('#f-date').setValue('2026-09-26')

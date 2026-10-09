@@ -23,19 +23,15 @@ export function canFollowUp(entry: Entry): boolean {
 
 /**
  * The link a follow-up on `source` stores: the Entry the chain started from, so
- * a follow-up on a follow-up still points at the original. When that original
- * has been deleted, `source` itself is the oldest Entry left for the job, so the
- * link points there rather than at an id nothing resolves to.
+ * a follow-up on a follow-up still points at the original.
  */
-export function followUpLinkTarget(source: Entry, entries: readonly Entry[]): string {
-  const original = source.linkedTo
-  return original && entries.some((entry) => entry.id === original) ? original : source.id
+export function followUpLinkTarget(source: Entry): string {
+  return source.linkedTo || source.id
 }
 
 /** The job's own fields from `source`, and the link, for a new Entry's form. */
 export function followUpFields(
   source: Entry,
-  entries: readonly Entry[],
 ): Pick<EntryDraft, FollowUpCopiedField> & { linkedTo: string } {
   return {
     employer: source.employer,
@@ -44,7 +40,7 @@ export function followUpFields(
     phone: source.phone,
     contactName: source.contactName,
     contract: source.contract ?? false,
-    linkedTo: followUpLinkTarget(source, entries),
+    linkedTo: followUpLinkTarget(source),
   }
 }
 
