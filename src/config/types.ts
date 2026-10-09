@@ -49,6 +49,12 @@ export interface StateConfig {
   /** True when the state records work search in its own portal and this tool is only a backup copy. */
   hasOnlineLogging: boolean
   activityTypes: ActivityType[]
+  /**
+   * The activity Follow up preselects: one of this config's own activity ids.
+   * A starting value the claimant can change, never an agency rule (ADR 0011).
+   * Unset where the state has no follow-up activity, so the choice starts blank.
+   */
+  followUpActivityId?: string
   contactMethods: string[]
   resultOptions: string[]
   siteOptions: string[]

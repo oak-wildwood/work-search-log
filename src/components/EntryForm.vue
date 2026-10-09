@@ -115,6 +115,8 @@ watch(
     if (!source) return
     pulseCount.value++
     Object.assign(draft, blankDraft(), followUpFields(source))
+    // A starting value the claimant can change; unset leaves it blank (ADR 0011).
+    draft.activityId = config.value.followUpActivityId ?? ''
     siteChoice.value = ''
     legacyActivityLabel.value = ''
     message.value = ''

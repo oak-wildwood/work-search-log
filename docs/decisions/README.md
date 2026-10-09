@@ -17,3 +17,4 @@ growing sections, that's usually a sign it's actually two decisions.
 8. [Optional local-server storage](./0008-optional-local-server-storage.md)
 9. [Follow up copies the job's own fields](./0009-follow-up-copies-the-jobs-own-fields.md)
 10. [Entries from past weeks can't be deleted](./0010-past-week-entries-cannot-be-deleted.md)
+11. [Follow up preselects the state's follow-up activity](./0011-follow-up-preselects-an-activity.md)
