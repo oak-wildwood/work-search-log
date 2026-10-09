@@ -4,6 +4,7 @@ import { nextTick } from 'vue'
 import EntryForm from './EntryForm.vue'
 import { useSettings } from '../composables/useSettings'
 import type { Entry, EntryDraft } from '../types'
+import { toLocalISODate } from '../lib/weeks'
 
 function makeEntry(overrides: Partial<Entry> = {}): Entry {
   return {
@@ -91,6 +92,17 @@ describe('EntryForm', () => {
     })
   })
 
+  describe('today button', () => {
+    it('leaves the date blank until clicked, then sets it to today', async () => {
+      const wrapper = mount(EntryForm)
+      const date = () => (wrapper.get('#f-date').element as HTMLInputElement).value
+      expect(date()).toBe('')
+
+      await wrapper.get('.today-btn').trigger('click')
+      expect(date()).toBe(toLocalISODate(new Date()))
+    })
+  })
+
   describe('date pinning', () => {
     it('keeps the date after saving when pinned', async () => {
       const wrapper = mount(EntryForm)
@@ -175,6 +187,147 @@ describe('EntryForm', () => {
 
       const select = wrapper.get('#f-activity').element as HTMLSelectElement
       expect(select.value).toBe('apply_online')
+    })
+  })
+
+  describe('follow up', () => {
+    const source = () =>
+      makeEntry({
+        id: 'app',
+        date: '2026-09-12',
+        siteAppliedOn: 'LinkedIn',
+        jobType: 'Frontend Engineer',
+        employer: 'Acme Robotics',
+        address: 'https://acme.example/jobs/1',
+        phone: '555-201-4488',
+        contactName: 'Priya Shah',
+        contactMethod: 'Email',
+        result: 'Application submitted',
+        notes: 'Referred by a friend',
+        contract: true,
+      })
+
+    it("copies the job's own fields and leaves every activity field blank", async () => {
+      const wrapper = mount(EntryForm, { props: { followingUp: source() } })
+      await nextTick()
+
+      const value = (selector: string) =>
+        (wrapper.get(selector).element as HTMLInputElement | HTMLSelectElement).value
+      expect(value('#f-employer')).toBe('Acme Robotics')
+      expect(value('#f-jobtype')).toBe('Frontend Engineer')
+      expect(value('#f-addr')).toBe('https://acme.example/jobs/1')
+      expect(value('#f-phone')).toBe('555-201-4488')
+      expect(value('#f-contact')).toBe('Priya Shah')
+      expect((wrapper.get('#f-contract').element as HTMLInputElement).checked).toBe(true)
+
+      expect(value('#f-date')).toBe('')
+      expect(value('#f-activity')).toBe('')
+      expect(value('#f-site')).toBe('')
+      expect(value('#f-method')).toBe('')
+      expect(value('#f-result')).toBe('')
+      expect(value('#f-notes')).toBe('')
+    })
+
+    it('opens the extra fields even when the source entry has none filled in', async () => {
+      const bare = makeEntry({ id: 'bare', employer: 'Acme Robotics' })
+      const wrapper = mount(EntryForm, { props: { followingUp: bare } })
+      await nextTick()
+      expect(wrapper.find('#f-method').exists()).toBe(true)
+    })
+
+    it('saves nothing until the claimant picks a date and activity', async () => {
+      const wrapper = mount(EntryForm, { props: { followingUp: source() } })
+      await nextTick()
+      await wrapper.get('form').trigger('submit')
+      expect(wrapper.emitted('submit')).toBeUndefined()
+    })
+
+    it('saves the link to the source entry with the new activity', async () => {
+      const wrapper = mount(EntryForm, { props: { followingUp: source() } })
+      await nextTick()
+      await wrapper.get('#f-date').setValue('2026-09-19')
+      await wrapper.get('#f-activity').setValue('follow_up')
+      await wrapper.get('form').trigger('submit')
+
+      const draft = wrapper.emitted('submit')?.[0]?.[0] as EntryDraft
+      expect(draft).toMatchObject({
+        date: '2026-09-19',
+        activityId: 'follow_up',
+        employer: 'Acme Robotics',
+        siteAppliedOn: '',
+        notes: '',
+        linkedTo: 'app',
+      })
+    })
+
+    it('links a follow-up on a follow-up to the original entry', async () => {
+      const second = makeEntry({ id: 'second', employer: 'Acme Robotics', linkedTo: 'app' })
+      const wrapper = mount(EntryForm, { props: { followingUp: second } })
+      await nextTick()
+      await wrapper.get('#f-date').setValue('2026-09-26')
+      await wrapper.get('#f-activity').setValue('interview')
+      await wrapper.get('form').trigger('submit')
+
+      const draft = wrapper.emitted('submit')?.[0]?.[0] as EntryDraft
+      expect(draft.linkedTo).toBe('app')
+    })
+
+    it('marks a copied field until the claimant changes it', async () => {
+      const wrapper = mount(EntryForm, { props: { followingUp: source() } })
+      await nextTick()
+      const employerLabel = () => wrapper.get('label[for="f-employer"]').text()
+      expect(employerLabel()).toContain('copied')
+
+      await wrapper.get('#f-employer').setValue('Acme Robotics Inc.')
+      expect(employerLabel()).not.toContain('copied')
+    })
+
+    it('adds no link key to an ordinary new entry', async () => {
+      const wrapper = mount(EntryForm)
+      await wrapper.get('#f-date').setValue('2026-09-19')
+      await wrapper.get('#f-activity').setValue('apply_online')
+      await wrapper.get('form').trigger('submit')
+
+      const draft = wrapper.emitted('submit')?.[0]?.[0] as EntryDraft
+      expect('linkedTo' in draft).toBe(false)
+    })
+
+    it('starts the next entry unlinked after saving a follow-up', async () => {
+      const wrapper = mount(EntryForm, { props: { followingUp: source() } })
+      await nextTick()
+      await wrapper.get('#f-date').setValue('2026-09-19')
+      await wrapper.get('#f-activity').setValue('follow_up')
+      await wrapper.get('form').trigger('submit')
+      await wrapper.setProps({ followingUp: null })
+
+      await wrapper.get('#f-date').setValue('2026-09-20')
+      await wrapper.get('#f-activity').setValue('apply_online')
+      await wrapper.get('form').trigger('submit')
+      const next = wrapper.emitted('submit')?.[1]?.[0] as EntryDraft
+      expect('linkedTo' in next).toBe(false)
+      expect(next.employer).toBe('')
+    })
+
+    it('keeps the link when a linked entry is edited, and none leaks into the next', async () => {
+      const linked = makeEntry({ id: 'f1', employer: 'Acme Robotics', linkedTo: 'app' })
+      const wrapper = mount(EntryForm, { props: { editing: linked } })
+      await nextTick()
+      await wrapper.get('form').trigger('submit')
+      expect((wrapper.emitted('submit')?.[0]?.[0] as EntryDraft).linkedTo).toBe('app')
+
+      await wrapper.setProps({ editing: makeEntry({ id: 'plain' }) })
+      await wrapper.get('form').trigger('submit')
+      expect('linkedTo' in (wrapper.emitted('submit')?.[1]?.[0] as EntryDraft)).toBe(false)
+    })
+
+    it('emits cancel from a follow-up', async () => {
+      const wrapper = mount(EntryForm, { props: { followingUp: source() } })
+      await nextTick()
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text() === 'Cancel')!
+        .trigger('click')
+      expect(wrapper.emitted('cancel')).toHaveLength(1)
     })
   })
 })

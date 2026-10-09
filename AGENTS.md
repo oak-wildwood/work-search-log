@@ -28,8 +28,8 @@ document submitted to a government agency.
 The one exception is **Follow up** on an existing Entry: it copies the fields that identify that
 job (`employer`, `jobType`, `address`, `phone`, `contactName`, `contract`) and links the new Entry
 to it, while every other field starts blank. Nothing else may copy from earlier Entries. See
-[ADR 0009](./docs/decisions/0009-follow-up-copies-the-jobs-own-fields.md). It is decided but not built
-yet, so don't assume `linkedTo` or the action exists in `src/`.
+[ADR 0009](./docs/decisions/0009-follow-up-copies-the-jobs-own-fields.md). The copied list lives in
+`FOLLOW_UP_COPIED_FIELDS` (`src/lib/followUp.ts`); widening it needs a new ADR.
 
 The one seeded fixture that exists (`src/lib/seedEntries.ts`) holds sample entries and the demo
 profile they belong to — `Test User`, `TX`, and a weekly requirement of 3. Both are fenced behind

@@ -30,6 +30,7 @@ const { settings, schedule, needsOnboarding } = useSettings()
 const { config, isFallback, stale } = useStateConfig()
 
 const editingEntry = ref<Entry | null>(null)
+const followUpSource = ref<Entry | null>(null)
 
 // Opens by itself on a first run, and by request from the header after that.
 const firstRun = needsOnboarding.value
@@ -73,16 +74,40 @@ function handleSubmit(draft: EntryDraft) {
     editingEntry.value = null
   } else {
     addEntry(draft)
+    followUpSource.value = null
   }
 }
 
+/** Room between the stuck search bar and the form, enough for the follow-up pulse. */
+const FORM_SCROLL_GAP = 20
+
+function scrollToForm() {
+  const form = document.querySelector<HTMLElement>('#entry-form form')
+  if (!form) return
+  // The search bar is sticky, so the form has to stop below where the bar sits
+  // once stuck, or the bar covers the form's top edge.
+  const bar = document.querySelector<HTMLElement>('.search-bar')
+  const barBottom = bar ? (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight : 0
+  const top = form.getBoundingClientRect().top + window.scrollY - barBottom - FORM_SCROLL_GAP
+  window.scrollTo({ top, behavior: 'smooth' })
+}
+
 function startEdit(entry: Entry) {
+  followUpSource.value = null
   editingEntry.value = entry
-  document.getElementById('entry-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  scrollToForm()
+}
+
+function startFollowUp(entry: Entry) {
+  editingEntry.value = null
+  // A fresh copy each click, so selecting the same entry again still registers.
+  followUpSource.value = { ...entry }
+  scrollToForm()
 }
 
 function cancelEdit() {
   editingEntry.value = null
+  followUpSource.value = null
 }
 
 function handlePrint() {
@@ -117,7 +142,12 @@ function handlePrint() {
     />
 
     <div id="entry-form" class="no-print">
-      <EntryForm :editing="editingEntry" @submit="handleSubmit" @cancel="cancelEdit" />
+      <EntryForm
+        :editing="editingEntry"
+        :following-up="followUpSource"
+        @submit="handleSubmit"
+        @cancel="cancelEdit"
+      />
     </div>
 
     <div class="history-head">
@@ -159,6 +189,7 @@ function handlePrint() {
         :default-expanded="index === 0"
         @edit="startEdit"
         @remove="removeEntry"
+        @follow-up="startFollowUp"
       />
     </div>
 

@@ -23,6 +23,12 @@ export interface Entry {
    * logged before it existed, which read as "not contract".
    */
   contract?: boolean
+  /**
+   * The id of the Entry this one concerns the same job as, set by Follow up and
+   * never changed after. Always the Entry a chain started from. Absent on
+   * unlinked entries; may point at a deleted Entry, which reads as unlinked.
+   */
+  linkedTo?: string
   createdAt: string
   updatedAt: string
 }

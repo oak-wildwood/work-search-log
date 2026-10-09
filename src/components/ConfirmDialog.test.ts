@@ -45,6 +45,17 @@ describe('ConfirmDialog', () => {
     expect(await result).toBe(true)
   })
 
+  it('shows only the OK button for an acknowledgement', async () => {
+    const w = mountDialog({ acknowledge: true, confirmLabel: 'OK' })
+    const result = openDialog(w)
+    await w.vm.$nextTick()
+
+    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>('dialog button')]
+    expect(buttons.map((button) => button.textContent?.trim())).toEqual(['OK'])
+    buttons[0].click()
+    expect(await result).toBe(true)
+  })
+
   it('resolves false when the cancel button is clicked', async () => {
     const w = mountDialog({ danger: true })
     const result = openDialog(w)

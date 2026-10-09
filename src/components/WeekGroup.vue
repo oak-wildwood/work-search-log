@@ -16,6 +16,7 @@ const props = defineProps<{
 defineEmits<{
   edit: [entry: Entry]
   remove: [id: string]
+  followUp: [entry: Entry]
 }>()
 
 const badgeClass = computed(() => outcomeClass(props.status?.outcome))
@@ -80,6 +81,7 @@ watch(
         :entry="entry"
         @edit="$emit('edit', $event)"
         @remove="$emit('remove', $event)"
+        @follow-up="$emit('followUp', $event)"
       />
     </div>
   </div>

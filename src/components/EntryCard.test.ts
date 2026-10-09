@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { DOMWrapper, mount, type VueWrapper } from '@vue/test-utils'
 import EntryCard from './EntryCard.vue'
+import { useEntries } from '../composables/useEntries'
 import type { Entry } from '../types'
 
 function entry(overrides: Partial<Entry> = {}): Entry {
@@ -32,6 +33,7 @@ let wrapper: VueWrapper | undefined
 afterEach(() => {
   wrapper?.unmount()
   wrapper = undefined
+  useEntries().clearAll()
 })
 
 describe('EntryCard', () => {
@@ -138,6 +140,57 @@ describe('EntryCard', () => {
       wrapper = mount(EntryCard, { props: { entry: entry() } })
       await wrapper.get('[title="Delete"]').trigger('click')
       expect(body().get('dialog').text()).toContain('this activity')
+    })
+  })
+
+  describe('follow up', () => {
+    it('is offered on an entry that names an employer, and emits that entry', async () => {
+      const source = entry({ employer: 'Acme Robotics' })
+      wrapper = mount(EntryCard, { props: { entry: source } })
+      const button = wrapper.findAll('button').find((b) => b.text() === 'Follow up')
+      await button!.trigger('click')
+      expect(wrapper.emitted('followUp')?.[0]).toEqual([source])
+    })
+
+    it('is not offered on an entry with no employer', () => {
+      wrapper = mount(EntryCard, { props: { entry: entry() } })
+      expect(wrapper.findAll('button').some((b) => b.text() === 'Follow up')).toBe(false)
+    })
+
+    it('shows which entry it links to, on screen only', () => {
+      useEntries().replaceAll([entry({ id: 'app', date: '2026-09-12', employer: 'Acme Robotics' })])
+      wrapper = mount(EntryCard, {
+        props: { entry: entry({ id: 'f1', employer: 'Acme Robotics', linkedTo: 'app' }) },
+      })
+      const linked = wrapper.get('.linked')
+      expect(linked.text()).toContain('Same job as your')
+      expect(linked.classes()).toContain('no-print')
+    })
+
+    it('shows nothing for a link to an entry no longer in the log', () => {
+      wrapper = mount(EntryCard, {
+        props: { entry: entry({ id: 'f1', employer: 'Acme Robotics', linkedTo: 'gone' }) },
+      })
+      expect(wrapper.find('.linked').exists()).toBe(false)
+    })
+
+    it('refuses to delete an entry others link to, and says why', async () => {
+      const app = entry({ id: 'app', employer: 'Acme Robotics' })
+      useEntries().replaceAll([
+        app,
+        entry({ id: 'f1', employer: 'Acme Robotics', linkedTo: 'app' }),
+        entry({ id: 'f2', employer: 'Acme Robotics', linkedTo: 'app' }),
+      ])
+      wrapper = mount(EntryCard, { props: { entry: app } })
+      await wrapper.get('[title="Delete"]').trigger('click')
+      // Both dialogs are always in the page, so check which one opened.
+      const opened = body().findAll('dialog[open]')
+      expect(opened).toHaveLength(1)
+      const blocked = opened[0]
+      expect(blocked.text()).toContain("2 entries link to this one, so it can't be deleted")
+      expect(blocked.findAll('button').map((button) => button.text())).toEqual(['OK'])
+      await blocked.get('button').trigger('click')
+      expect(wrapper.emitted('remove')).toBeUndefined()
     })
   })
 })
