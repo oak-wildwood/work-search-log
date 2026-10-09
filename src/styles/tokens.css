@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
+  /* Tells the browser which theme native controls (date picker icon, select
+     arrows, checkboxes) should draw in. */
+  color-scheme: light;
   --ink: #1b2620;
   --paper: #f4f2ea;
   --paper-2: #ebe7d8;
@@ -25,6 +28,7 @@
 }
 
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --ink: #e9e5d6;
   --paper: #181c16;
   --paper-2: #20241c;
@@ -56,6 +60,7 @@ body {
 @media print {
   :root,
   :root[data-theme='dark'] {
+    color-scheme: light;
     --ink: #000;
     --paper: #fff;
     --paper-2: #fff;
