@@ -107,15 +107,16 @@ watch(
 /** Keys the pulse ring, so every Follow up click replays its animation. */
 const pulseCount = ref(0)
 
-// Follow up copies the job's own fields from the Entry it was clicked on, and
-// nothing else: everything about the new activity starts blank (ADR 0009).
+// Follow up copies the job's own fields from the Entry it was clicked on (ADR 0009)
+// and preselects the state's follow-up activity (ADR 0011). Everything else about
+// the new activity, the date included, starts blank.
 watch(
   () => props.followingUp,
   (source) => {
     if (!source) return
     pulseCount.value++
     Object.assign(draft, blankDraft(), followUpFields(source))
-    // A starting value the claimant can change; unset leaves it blank (ADR 0011).
+    // A starting value the claimant can change; unset leaves it blank.
     draft.activityId = config.value.followUpActivityId ?? ''
     siteChoice.value = ''
     legacyActivityLabel.value = ''
