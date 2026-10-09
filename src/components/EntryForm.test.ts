@@ -228,6 +228,13 @@ describe('EntryForm', () => {
       expect(value('#f-notes')).toBe('')
     })
 
+    it('opens the extra fields even when the source entry has none filled in', async () => {
+      const bare = makeEntry({ id: 'bare', employer: 'Acme Robotics' })
+      const wrapper = mount(EntryForm, { props: { followingUp: bare } })
+      await nextTick()
+      expect(wrapper.find('#f-method').exists()).toBe(true)
+    })
+
     it('saves nothing until the claimant picks a date and activity', async () => {
       const wrapper = mount(EntryForm, { props: { followingUp: source() } })
       await nextTick()

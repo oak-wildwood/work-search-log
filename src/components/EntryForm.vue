@@ -118,7 +118,8 @@ watch(
     siteChoice.value = ''
     legacyActivityLabel.value = ''
     message.value = ''
-    if (source.address || source.phone || source.contactName) showMoreFields.value = true
+    // Contact name and method are what a follow-up usually needs, so they're open.
+    showMoreFields.value = true
   },
   { immediate: true },
 )
