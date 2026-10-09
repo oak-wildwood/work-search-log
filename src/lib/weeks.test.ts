@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatWeekRange, groupByWeek, parseLocalISO, weekStartDate } from './weeks'
+import {
+  formatWeekRange,
+  groupByWeek,
+  isBeforeCurrentWeek,
+  parseLocalISO,
+  weekStartDate,
+} from './weeks'
 import type { Entry } from '../types'
 
 function makeEntry(date: string, id = date): Entry {
@@ -107,5 +113,23 @@ describe('groupByWeek', () => {
     const entries = [makeEntry('2026-08-09'), makeEntry('2026-08-10')] // Sunday, Monday
     expect(groupByWeek(entries, 0)).toHaveLength(1)
     expect(groupByWeek(entries, 1)).toHaveLength(2)
+  })
+})
+
+describe('isBeforeCurrentWeek', () => {
+  // A Wednesday. With Sunday-start weeks the current week began Aug 23; with
+  // Monday-start weeks it began Aug 24.
+  const today = new Date('2026-08-26T12:00:00')
+
+  it('is true only for dates before the current week begins', () => {
+    expect(isBeforeCurrentWeek('2026-08-22', 0, today)).toBe(true)
+    expect(isBeforeCurrentWeek('2026-08-23', 0, today)).toBe(false)
+    expect(isBeforeCurrentWeek('2026-08-26', 0, today)).toBe(false)
+    expect(isBeforeCurrentWeek('2026-09-01', 0, today)).toBe(false)
+  })
+
+  it("follows the state's week start day", () => {
+    expect(isBeforeCurrentWeek('2026-08-23', 1, today)).toBe(true)
+    expect(isBeforeCurrentWeek('2026-08-24', 1, today)).toBe(false)
   })
 })

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { formatISODate } from '../lib/weeks'
+import { formatISODate, isBeforeCurrentWeek } from '../lib/weeks'
 import type { Entry } from '../types'
 import { useSearch } from '../composables/useSearch'
 import { useEntries } from '../composables/useEntries'
+import { useStateConfig } from '../composables/useStateConfig'
 import { canFollowUp, countLinkedTo } from '../lib/followUp'
 import ConfirmDialog from './ConfirmDialog.vue'
 import HighlightText from './HighlightText.vue'
@@ -19,6 +20,10 @@ const emit = defineEmits<{
 }>()
 
 const { entries } = useEntries()
+const { config } = useStateConfig()
+
+/** An entry from a week that has ended is kept: it can be edited, never deleted (ADR 0010). */
+const deletable = computed(() => !isBeforeCurrentWeek(props.entry.date, config.value.weekStartDay))
 
 /** The Entry this one links to, if it is still in the log. */
 const linkedEntry = computed(() => {
@@ -105,7 +110,9 @@ async function handleRemove(entry: Entry) {
           Follow up
         </button>
         <button class="icon-btn" title="Edit" @click.stop="emit('edit', entry)">✎</button>
-        <button class="icon-btn" title="Delete" @click.stop="handleRemove(entry)">✕</button>
+        <button v-if="deletable" class="icon-btn" title="Delete" @click.stop="handleRemove(entry)">
+          ✕
+        </button>
       </div>
     </div>
     <div class="summary">

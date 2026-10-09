@@ -68,6 +68,18 @@ export function currentWeekKey(weekStartDay = 0): string {
   return toLocalISODate(weekStartDate(toLocalISODate(new Date()), weekStartDay))
 }
 
+/**
+ * Whether a stored yyyy-mm-dd falls before the current reporting week. Entries
+ * from those weeks can't be deleted (ADR 0010).
+ */
+export function isBeforeCurrentWeek(
+  dateStr: string,
+  weekStartDay = 0,
+  today = new Date(),
+): boolean {
+  return dateStr < toLocalISODate(weekStartDate(toLocalISODate(today), weekStartDay))
+}
+
 export function groupByWeek(entries: Entry[], weekStartDay = 0): WeekGroup[] {
   const groups = new Map<string, WeekGroup>()
 
