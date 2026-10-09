@@ -4,6 +4,7 @@ import { nextTick } from 'vue'
 import EntryForm from './EntryForm.vue'
 import { useSettings } from '../composables/useSettings'
 import type { Entry, EntryDraft } from '../types'
+import { toLocalISODate } from '../lib/weeks'
 
 function makeEntry(overrides: Partial<Entry> = {}): Entry {
   return {
@@ -88,6 +89,17 @@ describe('EntryForm', () => {
       await wrapper.get('form').trigger('submit')
       const draft = wrapper.emitted('submit')?.[0]?.[0] as EntryDraft
       expect(draft.siteAppliedOn).toBe('')
+    })
+  })
+
+  describe('today button', () => {
+    it('leaves the date blank until clicked, then sets it to today', async () => {
+      const wrapper = mount(EntryForm)
+      const date = () => (wrapper.get('#f-date').element as HTMLInputElement).value
+      expect(date()).toBe('')
+
+      await wrapper.get('.today-btn').trigger('click')
+      expect(date()).toBe(toLocalISODate(new Date()))
     })
   })
 

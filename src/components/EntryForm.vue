@@ -5,7 +5,7 @@ import { useStateConfig } from '../composables/useStateConfig'
 import { resolveActivity } from '../config'
 import { noAutofillAttrs } from '../lib/noAutofill'
 import { followUpFields, type FollowUpCopiedField } from '../lib/followUp'
-import { formatISODate } from '../lib/weeks'
+import { formatISODate, toLocalISODate } from '../lib/weeks'
 
 const { config } = useStateConfig()
 
@@ -104,12 +104,16 @@ watch(
   { immediate: true },
 )
 
+/** Keys the pulse ring, so every Follow up click replays its animation. */
+const pulseCount = ref(0)
+
 // Follow up copies the job's own fields from the Entry it was clicked on, and
 // nothing else: everything about the new activity starts blank (ADR 0009).
 watch(
   () => props.followingUp,
   (source) => {
     if (!source) return
+    pulseCount.value++
     Object.assign(draft, blankDraft(), followUpFields(source))
     siteChoice.value = ''
     legacyActivityLabel.value = ''
@@ -168,6 +172,7 @@ function handleCancel() {
 
 <template>
   <form class="add-form" :class="{ 'following-up': isFollowingUp }" @submit.prevent="handleSubmit">
+    <span v-if="isFollowingUp" :key="pulseCount" class="pulse-ring" aria-hidden="true"></span>
     <div class="card-head">
       <h2>{{ editing ? 'Edit activity' : isFollowingUp ? 'Follow up' : 'Log an activity' }}</h2>
       <p class="hint" role="status" aria-live="polite">
@@ -194,6 +199,16 @@ function handleCancel() {
         <label for="f-date">Date</label>
         <div class="date-row">
           <input id="f-date" v-model="draft.date" type="date" required />
+          <!-- The date is never filled in for the claimant (ADR 0004, 0009); this is
+               a one-click way to choose today, not a default. -->
+          <button
+            type="button"
+            class="today-btn"
+            title="Set the date to today"
+            @click="draft.date = toLocalISODate(new Date())"
+          >
+            Today
+          </button>
           <button
             type="button"
             class="pin-btn"
@@ -371,6 +386,7 @@ function handleCancel() {
 
 <style scoped>
 .add-form {
+  position: relative;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -398,12 +414,32 @@ h2 {
   margin: 0;
   min-height: 14px;
 }
+/* A 1px brass ring marks follow-up mode. The pulse lives on its own element,
+   re-created on every Follow up click, so it plays each time one is selected. */
 .add-form.following-up {
-  border: 2px solid var(--brass);
-  background: linear-gradient(rgba(138, 109, 59, 0.07), rgba(138, 109, 59, 0.07)), var(--card);
   box-shadow:
-    0 0 0 4px rgba(138, 109, 59, 0.18),
+    0 0 0 1px var(--brass),
     0 2px 10px var(--shadow);
+}
+.pulse-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: follow-up-pulse 0.9s ease-out 1 forwards;
+}
+@keyframes follow-up-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--brass) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px color-mix(in srgb, var(--brass) 0%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse-ring {
+    animation: none;
+  }
 }
 .follow-up-banner {
   display: flex;
@@ -507,6 +543,21 @@ textarea {
 }
 .date-row input {
   flex: 1;
+}
+.today-btn {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--card);
+  color: var(--brass);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 0 10px;
+}
+.today-btn:hover {
+  border-color: var(--brass);
+  background: rgba(138, 109, 59, 0.1);
 }
 .pin-btn {
   flex: 0 0 auto;

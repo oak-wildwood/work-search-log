@@ -78,8 +78,18 @@ function handleSubmit(draft: EntryDraft) {
   }
 }
 
+/** Room between the stuck search bar and the form, enough for the follow-up pulse. */
+const FORM_SCROLL_GAP = 20
+
 function scrollToForm() {
-  document.getElementById('entry-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const form = document.querySelector<HTMLElement>('#entry-form form')
+  if (!form) return
+  // The search bar is sticky, so the form has to stop below where the bar sits
+  // once stuck, or the bar covers the form's top edge.
+  const bar = document.querySelector<HTMLElement>('.search-bar')
+  const barBottom = bar ? (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight : 0
+  const top = form.getBoundingClientRect().top + window.scrollY - barBottom - FORM_SCROLL_GAP
+  window.scrollTo({ top, behavior: 'smooth' })
 }
 
 function startEdit(entry: Entry) {
@@ -90,7 +100,8 @@ function startEdit(entry: Entry) {
 
 function startFollowUp(entry: Entry) {
   editingEntry.value = null
-  followUpSource.value = entry
+  // A fresh copy each click, so selecting the same entry again still registers.
+  followUpSource.value = { ...entry }
   scrollToForm()
 }
 
