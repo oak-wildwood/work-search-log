@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DOMWrapper, mount, type VueWrapper } from '@vue/test-utils'
 import EntryCard from './EntryCard.vue'
 import { useEntries } from '../composables/useEntries'
@@ -29,8 +29,16 @@ function entry(overrides: Partial<Entry> = {}): Entry {
 // lands outside the mounted wrapper's own element tree.
 const body = () => new DOMWrapper(document.body)
 
+// Pinned to the fixture's own date, so its entries sit in the current week and
+// can be deleted unless a test moves them into the past.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-08-24T12:00:00'))
+})
+
 let wrapper: VueWrapper | undefined
 afterEach(() => {
+  vi.useRealTimers()
   wrapper?.unmount()
   wrapper = undefined
   useEntries().clearAll()
@@ -191,6 +199,19 @@ describe('EntryCard', () => {
       expect(blocked.findAll('button').map((button) => button.text())).toEqual(['OK'])
       await blocked.get('button').trigger('click')
       expect(wrapper.emitted('remove')).toBeUndefined()
+    })
+  })
+
+  describe('past weeks', () => {
+    it('offers no Delete on an entry from a week that has ended, but still offers Edit', () => {
+      wrapper = mount(EntryCard, { props: { entry: entry({ date: '2026-08-01' }) } })
+      expect(wrapper.find('[title="Delete"]').exists()).toBe(false)
+      expect(wrapper.find('[title="Edit"]').exists()).toBe(true)
+    })
+
+    it('offers Delete on an entry from the current week', () => {
+      wrapper = mount(EntryCard, { props: { entry: entry({ date: '2026-08-24' }) } })
+      expect(wrapper.find('[title="Delete"]').exists()).toBe(true)
     })
   })
 })
