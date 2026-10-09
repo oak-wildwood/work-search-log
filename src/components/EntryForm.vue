@@ -573,6 +573,12 @@ textarea {
     opacity 0.15s ease,
     filter 0.15s ease;
 }
+/* The grayed-out emoji is near-black, so dark mode lifts it to read as off,
+   not missing. */
+:root[data-theme='dark'] .pin-btn:not(.active) {
+  opacity: 0.6;
+  filter: grayscale(1) brightness(1.8);
+}
 .pin-btn.active {
   opacity: 1;
   filter: none;
