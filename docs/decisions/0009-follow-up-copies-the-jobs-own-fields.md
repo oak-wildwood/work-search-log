@@ -36,9 +36,12 @@ This is not a suggestion in 0004's sense. The copied fields identify a job the c
 recorded, chosen by the claimant on the Entry they clicked; nothing is inferred, ranked or offered
 from other Entries. Every field that says what happened, and when, still comes from the claimant.
 
-Deleting an Entry that others link to warns how many link to it and goes ahead if confirmed. The
-linked Entries stay, since each is still an activity the claimant did; their `linkedTo` then
-points at nothing, which is harmless. There is no way to add or change a link after saving.
+An Entry that others link to can't be deleted: the app says how many link to it and asks for those
+to be deleted first. So a link made in the app always points at an Entry still in the log, and a
+chain stays one level deep without any rule for a missing original. There is no way to add or
+change a link after saving. A link can still point at nothing if an older backup is restored over
+the log; that is harmless, and a follow-up on such an Entry links to the same missing id rather
+than starting a second level.
 
 ## Consequences
 

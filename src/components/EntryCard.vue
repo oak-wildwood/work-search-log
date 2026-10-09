@@ -59,7 +59,15 @@ function toggleDetails() {
 
 const removeDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null)
 
+const blockedDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null)
+
+// An Entry others link to can't be deleted, so a link never points at nothing
+// and a chain never grows past one level (ADR 0009).
 async function handleRemove(entry: Entry) {
+  if (linkedCount.value) {
+    await blockedDialog.value?.open()
+    return
+  }
   if (await removeDialog.value?.open()) {
     emit('remove', entry.id)
   }
@@ -150,10 +158,11 @@ async function handleRemove(entry: Entry) {
 
   <ConfirmDialog ref="removeDialog" confirm-label="Delete" danger>
     Delete the {{ formatISODate(entry.date) }} entry for {{ entry.employer || 'this activity' }}?
-    <template v-if="linkedCount">
-      {{ linkedCount === 1 ? '1 entry links' : `${linkedCount} entries link` }} to it.
-      {{ linkedCount === 1 ? 'It stays' : 'They stay' }} in the log.
-    </template>
+  </ConfirmDialog>
+
+  <ConfirmDialog ref="blockedDialog" confirm-label="OK" acknowledge>
+    {{ linkedCount === 1 ? '1 entry links' : `${linkedCount} entries link` }} to this one, so it
+    can't be deleted. Delete {{ linkedCount === 1 ? 'that entry' : 'those entries' }} first.
   </ConfirmDialog>
 </template>
 

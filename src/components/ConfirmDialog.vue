@@ -9,11 +9,14 @@ withDefaults(
     /** Puts Cancel in the default-focus position, since Enter is the last thing
      *  a destructive dialog should reward. */
     danger?: boolean
+    /** A notice with nothing to choose: only the confirm button, labelled OK by default. */
+    acknowledge?: boolean
   }>(),
   {
     confirmLabel: 'Confirm',
     cancelLabel: 'Cancel',
     danger: false,
+    acknowledge: false,
   },
 )
 
@@ -70,7 +73,13 @@ defineExpose({ open })
            first focusable element) landing on the confirm button. -->
       <!-- eslint-disable vuejs-accessibility/no-autofocus -->
       <div class="actions">
-        <button class="ghost" type="button" :autofocus="danger" @click="settle(false)">
+        <button
+          v-if="!acknowledge"
+          class="ghost"
+          type="button"
+          :autofocus="danger"
+          @click="settle(false)"
+        >
           {{ cancelLabel }}
         </button>
         <button

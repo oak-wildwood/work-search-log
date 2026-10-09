@@ -174,7 +174,7 @@ describe('EntryCard', () => {
       expect(wrapper.find('.linked').exists()).toBe(false)
     })
 
-    it('warns how many entries link to one before it is deleted', async () => {
+    it('refuses to delete an entry others link to, and says why', async () => {
       const app = entry({ id: 'app', employer: 'Acme Robotics' })
       useEntries().replaceAll([
         app,
@@ -183,9 +183,14 @@ describe('EntryCard', () => {
       ])
       wrapper = mount(EntryCard, { props: { entry: app } })
       await wrapper.get('[title="Delete"]').trigger('click')
-      expect(body().get('dialog').text()).toContain('2 entries link to it. They stay in the log.')
-      await body().get('dialog button.danger').trigger('click')
-      expect(wrapper.emitted('remove')?.[0]).toEqual(['app'])
+      // Both dialogs are always in the page, so check which one opened.
+      const opened = body().findAll('dialog[open]')
+      expect(opened).toHaveLength(1)
+      const blocked = opened[0]
+      expect(blocked.text()).toContain("2 entries link to this one, so it can't be deleted")
+      expect(blocked.findAll('button').map((button) => button.text())).toEqual(['OK'])
+      await blocked.get('button').trigger('click')
+      expect(wrapper.emitted('remove')).toBeUndefined()
     })
   })
 })
