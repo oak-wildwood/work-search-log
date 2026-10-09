@@ -15,3 +15,4 @@ growing sections, that's usually a sign it's actually two decisions.
 6. [Agent instructions in one file, with procedure in a skill](./0006-agent-instructions-layering.md)
 7. [Entry storage behind an EntryRepository interface](./0007-entry-repository.md)
 8. [Optional local-server storage](./0008-optional-local-server-storage.md)
+9. [Follow up copies the job's own fields](./0009-follow-up-copies-the-jobs-own-fields.md)
