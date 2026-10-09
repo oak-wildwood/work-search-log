@@ -64,8 +64,8 @@ export function weekStartDate(dateStr: string, weekStartDay = 0): Date {
  * display value: preferences writes a requirement's `effective` date with it and
  * the header and summary read it back, so all three have to agree exactly.
  */
-export function currentWeekKey(weekStartDay = 0): string {
-  return toLocalISODate(weekStartDate(toLocalISODate(new Date()), weekStartDay))
+export function currentWeekKey(weekStartDay = 0, today = new Date()): string {
+  return toLocalISODate(weekStartDate(toLocalISODate(today), weekStartDay))
 }
 
 /**
@@ -77,7 +77,7 @@ export function isBeforeCurrentWeek(
   weekStartDay = 0,
   today = new Date(),
 ): boolean {
-  return dateStr < toLocalISODate(weekStartDate(toLocalISODate(today), weekStartDay))
+  return dateStr < currentWeekKey(weekStartDay, today)
 }
 
 export function groupByWeek(entries: Entry[], weekStartDay = 0): WeekGroup[] {
