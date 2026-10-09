@@ -2,12 +2,14 @@
 import { computed, reactive, ref, watch } from 'vue'
 import type { Entry, EntryDraft } from '../types'
 import { useStateConfig } from '../composables/useStateConfig'
+import { useEntries } from '../composables/useEntries'
 import { resolveActivity } from '../config'
 import { noAutofillAttrs } from '../lib/noAutofill'
 import { followUpFields, type FollowUpCopiedField } from '../lib/followUp'
 import { formatISODate, toLocalISODate } from '../lib/weeks'
 
 const { config } = useStateConfig()
+const { entries } = useEntries()
 
 const props = defineProps<{
   editing?: Entry | null
@@ -114,7 +116,7 @@ watch(
   (source) => {
     if (!source) return
     pulseCount.value++
-    Object.assign(draft, blankDraft(), followUpFields(source))
+    Object.assign(draft, blankDraft(), followUpFields(source, entries.value))
     siteChoice.value = ''
     legacyActivityLabel.value = ''
     message.value = ''
