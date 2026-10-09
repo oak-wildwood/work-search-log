@@ -4,11 +4,15 @@ import type { Entry, EntryDraft } from '../types'
 import { useStateConfig } from '../composables/useStateConfig'
 import { resolveActivity } from '../config'
 import { noAutofillAttrs } from '../lib/noAutofill'
+import { followUpFields, type FollowUpCopiedField } from '../lib/followUp'
+import { formatISODate } from '../lib/weeks'
 
 const { config } = useStateConfig()
 
 const props = defineProps<{
   editing?: Entry | null
+  /** The Entry whose Follow up opened this form for a new, linked Entry. */
+  followingUp?: Entry | null
 }>()
 
 const emit = defineEmits<{
@@ -31,6 +35,7 @@ function blankDraft(): EntryDraft {
     result: '',
     notes: '',
     contract: false,
+    linkedTo: '',
   }
 }
 
@@ -99,16 +104,44 @@ watch(
   { immediate: true },
 )
 
+// Follow up copies the job's own fields from the Entry it was clicked on, and
+// nothing else: everything about the new activity starts blank (ADR 0009).
+watch(
+  () => props.followingUp,
+  (source) => {
+    if (!source) return
+    Object.assign(draft, blankDraft(), followUpFields(source))
+    siteChoice.value = ''
+    legacyActivityLabel.value = ''
+    message.value = ''
+    if (source.address || source.phone || source.contactName) showMoreFields.value = true
+  },
+  { immediate: true },
+)
+
+const isFollowingUp = computed(() => !!props.followingUp && !props.editing)
+
+/** Marks a field still holding the value Follow up copied into it. */
+function isCopied(field: FollowUpCopiedField): boolean {
+  const source = props.followingUp
+  if (!source) return false
+  if (field === 'contract') return !!source.contract && draft.contract === true
+  return source[field] !== '' && draft[field] === source[field]
+}
+
 function handleSubmit() {
   if (!draft.date || !draft.activityId) {
     message.value = 'Date and activity are required.'
     return
   }
   const keepingLegacy = draft.activityId === LEGACY_ACTIVITY
+  const { linkedTo, ...fields } = draft
   emit('submit', {
-    ...draft,
+    ...fields,
     activityId: keepingLegacy ? '' : draft.activityId,
     activity: keepingLegacy ? legacyActivityLabel.value : (selectedActivity.value?.label ?? ''),
+    // An unlinked Entry carries no key at all, like every Entry before links existed.
+    ...(linkedTo ? { linkedTo } : {}),
   })
   if (props.editing) {
     message.value = ''
@@ -134,12 +167,26 @@ function handleCancel() {
 </script>
 
 <template>
-  <form class="add-form" @submit.prevent="handleSubmit">
+  <form class="add-form" :class="{ 'following-up': isFollowingUp }" @submit.prevent="handleSubmit">
     <div class="card-head">
-      <h2>{{ editing ? 'Edit activity' : 'Log an activity' }}</h2>
+      <h2>{{ editing ? 'Edit activity' : isFollowingUp ? 'Follow up' : 'Log an activity' }}</h2>
       <p class="hint" role="status" aria-live="polite">
         {{ message || 'Date and activity are required.' }}
       </p>
+    </div>
+
+    <div v-if="followingUp && isFollowingUp" class="follow-up-banner">
+      <span class="mode-tag">Linked</span>
+      <div>
+        <p class="follow-up-job">
+          {{ followingUp.employer
+          }}<template v-if="followingUp.jobType"> · {{ followingUp.jobType }}</template>
+        </p>
+        <p class="follow-up-hint">
+          Same job as your {{ formatISODate(followingUp.date) }} entry. Fields marked copied came
+          from it; say what you did this time, and when.
+        </p>
+      </div>
     </div>
 
     <div class="two-col">
@@ -209,7 +256,9 @@ function handleCancel() {
 
     <div class="two-col">
       <div class="field">
-        <label for="f-employer">Employer</label>
+        <label for="f-employer"
+          >Employer <span v-if="isCopied('employer')" class="copied">copied</span></label
+        >
         <input
           id="f-employer"
           v-model="draft.employer"
@@ -219,7 +268,9 @@ function handleCancel() {
         />
       </div>
       <div class="field">
-        <label for="f-jobtype">Job sought</label>
+        <label for="f-jobtype"
+          >Job sought <span v-if="isCopied('jobType')" class="copied">copied</span></label
+        >
         <input
           id="f-jobtype"
           v-model="draft.jobType"
@@ -234,6 +285,7 @@ function handleCancel() {
       <label class="check-label" for="f-contract">
         <input id="f-contract" v-model="draft.contract" type="checkbox" />
         Contract role
+        <span v-if="isCopied('contract')" class="copied">copied</span>
       </label>
     </div>
 
@@ -242,7 +294,10 @@ function handleCancel() {
 
       <div class="two-col">
         <div class="field">
-          <label for="f-addr">Employer address / website</label>
+          <label for="f-addr"
+            >Employer address / website
+            <span v-if="isCopied('address')" class="copied">copied</span></label
+          >
           <input
             id="f-addr"
             v-model="draft.address"
@@ -252,7 +307,10 @@ function handleCancel() {
           />
         </div>
         <div class="field">
-          <label for="f-phone">Employer phone (with area code)</label>
+          <label for="f-phone"
+            >Employer phone (with area code)
+            <span v-if="isCopied('phone')" class="copied">copied</span></label
+          >
           <input
             id="f-phone"
             v-model="draft.phone"
@@ -265,7 +323,9 @@ function handleCancel() {
 
       <div class="two-col">
         <div class="field">
-          <label for="f-contact">Contact name</label>
+          <label for="f-contact"
+            >Contact name <span v-if="isCopied('contactName')" class="copied">copied</span></label
+          >
           <input
             id="f-contact"
             v-model="draft.contactName"
@@ -296,11 +356,15 @@ function handleCancel() {
     </template>
 
     <div class="form-actions">
-      <button type="submit" class="save-btn">{{ editing ? 'Save changes' : 'Add to log' }}</button>
+      <button type="submit" class="save-btn">
+        {{ editing ? 'Save changes' : isFollowingUp ? 'Add linked entry' : 'Add to log' }}
+      </button>
       <button type="button" class="ghost-btn" @click="showMoreFields = !showMoreFields">
         {{ showMoreFields ? 'Fewer fields' : 'More fields' }}
       </button>
-      <button v-if="editing" type="button" class="ghost-btn" @click="handleCancel">Cancel</button>
+      <button v-if="editing || followingUp" type="button" class="ghost-btn" @click="handleCancel">
+        Cancel
+      </button>
     </div>
   </form>
 </template>
@@ -333,6 +397,48 @@ h2 {
   color: var(--muted);
   margin: 0;
   min-height: 14px;
+}
+.add-form.following-up {
+  border: 2px solid var(--brass);
+}
+.follow-up-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--brass);
+  border-radius: 3px;
+  background: rgba(138, 109, 59, 0.1);
+}
+.mode-tag {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 3px;
+  background: var(--brass);
+  color: var(--card);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.follow-up-job {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+.follow-up-hint {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.copied {
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--brass);
+  border-radius: 3px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
 }
 .divider {
   border: none;

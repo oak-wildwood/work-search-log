@@ -30,6 +30,7 @@ const { settings, schedule, needsOnboarding } = useSettings()
 const { config, isFallback, stale } = useStateConfig()
 
 const editingEntry = ref<Entry | null>(null)
+const followUpSource = ref<Entry | null>(null)
 
 // Opens by itself on a first run, and by request from the header after that.
 const firstRun = needsOnboarding.value
@@ -73,16 +74,29 @@ function handleSubmit(draft: EntryDraft) {
     editingEntry.value = null
   } else {
     addEntry(draft)
+    followUpSource.value = null
   }
 }
 
-function startEdit(entry: Entry) {
-  editingEntry.value = entry
+function scrollToForm() {
   document.getElementById('entry-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function startEdit(entry: Entry) {
+  followUpSource.value = null
+  editingEntry.value = entry
+  scrollToForm()
+}
+
+function startFollowUp(entry: Entry) {
+  editingEntry.value = null
+  followUpSource.value = entry
+  scrollToForm()
 }
 
 function cancelEdit() {
   editingEntry.value = null
+  followUpSource.value = null
 }
 
 function handlePrint() {
@@ -117,7 +131,12 @@ function handlePrint() {
     />
 
     <div id="entry-form" class="no-print">
-      <EntryForm :editing="editingEntry" @submit="handleSubmit" @cancel="cancelEdit" />
+      <EntryForm
+        :editing="editingEntry"
+        :following-up="followUpSource"
+        @submit="handleSubmit"
+        @cancel="cancelEdit"
+      />
     </div>
 
     <div class="history-head">
@@ -159,6 +178,7 @@ function handlePrint() {
         :default-expanded="index === 0"
         @edit="startEdit"
         @remove="removeEntry"
+        @follow-up="startFollowUp"
       />
     </div>
 

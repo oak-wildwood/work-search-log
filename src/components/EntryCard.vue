@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { formatISODate } from '../lib/weeks'
 import type { Entry } from '../types'
 import { useSearch } from '../composables/useSearch'
+import { useEntries } from '../composables/useEntries'
+import { canFollowUp, countLinkedTo } from '../lib/followUp'
 import ConfirmDialog from './ConfirmDialog.vue'
 import HighlightText from './HighlightText.vue'
 
@@ -13,7 +15,18 @@ const props = defineProps<{
 const emit = defineEmits<{
   edit: [entry: Entry]
   remove: [id: string]
+  followUp: [entry: Entry]
 }>()
+
+const { entries } = useEntries()
+
+/** The Entry this one links to, if it is still in the log. */
+const linkedEntry = computed(() => {
+  const target = props.entry.linkedTo
+  return target ? (entries.value.find((e) => e.id === target) ?? null) : null
+})
+
+const linkedCount = computed(() => countLinkedTo(entries.value, props.entry.id))
 
 const { normalizedQuery: searchQuery, activeMatchId } = useSearch()
 const highlighted = computed(() => props.entry.id === activeMatchId.value)
@@ -74,6 +87,15 @@ async function handleRemove(entry: Entry) {
         <button v-if="hasDetails" class="text-link" type="button" @click.stop="toggleDetails">
           {{ showDetails ? 'Hide' : 'Details' }}
         </button>
+        <button
+          v-if="canFollowUp(entry)"
+          class="text-link"
+          type="button"
+          title="Log another activity for this job"
+          @click.stop="emit('followUp', entry)"
+        >
+          Follow up
+        </button>
         <button class="icon-btn" title="Edit" @click.stop="emit('edit', entry)">✎</button>
         <button class="icon-btn" title="Delete" @click.stop="handleRemove(entry)">✕</button>
       </div>
@@ -92,6 +114,10 @@ async function handleRemove(entry: Entry) {
            stays off the printed sheet. -->
       <span v-if="entry.contract" class="contract-tag no-print">Contract</span>
     </div>
+    <!-- On screen only: the printed row already names the employer and title (ADR 0009). -->
+    <p v-if="linkedEntry" class="linked no-print">
+      Same job as your {{ formatISODate(linkedEntry.date) }} entry
+    </p>
 
     <div v-if="hasDetails" class="details" :class="{ collapsed: !showDetails }">
       <div v-if="entry.jobType" class="row">
@@ -124,6 +150,10 @@ async function handleRemove(entry: Entry) {
 
   <ConfirmDialog ref="removeDialog" confirm-label="Delete" danger>
     Delete the {{ formatISODate(entry.date) }} entry for {{ entry.employer || 'this activity' }}?
+    <template v-if="linkedCount">
+      {{ linkedCount === 1 ? '1 entry links' : `${linkedCount} entries link` }} to it.
+      {{ linkedCount === 1 ? 'It stays' : 'They stay' }} in the log.
+    </template>
   </ConfirmDialog>
 </template>
 
@@ -173,6 +203,11 @@ async function handleRemove(entry: Entry) {
   font-size: 13px;
   color: var(--muted);
   margin-top: 2px;
+}
+.linked {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 2px 0 0;
 }
 .contract-tag {
   margin-left: 8px;
