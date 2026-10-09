@@ -53,7 +53,8 @@ function normalizeActivity(raw: unknown): ActivityType | null {
   return activity
 }
 
-function normalizeConfig(raw: unknown): StateConfig | null {
+/** Exported for tests; everything else reads configs through the registry below. */
+export function normalizeConfig(raw: unknown): StateConfig | null {
   const rec = asRecord(raw)
   const code = str(rec.code)
   if (!code) return null
@@ -103,6 +104,13 @@ function normalizeConfig(raw: unknown): StateConfig | null {
   const weeklyRequirement = posInt(rec.weekly_requirement)
   if (weeklyRequirement !== undefined && config.requirementSource === 'state') {
     config.weeklyRequirement = weeklyRequirement
+  }
+
+  // Kept only when it names one of this config's activities, so a typo can't
+  // preselect something the dropdown doesn't offer; the choice just starts blank.
+  const followUpActivity = str(rec.follow_up_activity)
+  if (config.activityTypes.some((activity) => activity.id === followUpActivity)) {
+    config.followUpActivityId = followUpActivity
   }
 
   // Date is the one field nothing can degrade past: an undated record isn't a record.

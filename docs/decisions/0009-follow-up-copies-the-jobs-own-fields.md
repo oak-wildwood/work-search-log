@@ -22,8 +22,9 @@ with:
   from the earlier Entry and its date, and can be changed before saving.
 - **Blank:** `date`, `activityId` and `activity`, `siteAppliedOn`, `contactMethod`, `result` and
   `notes`. These describe the new activity (`siteAppliedOn` says where an application was made),
-  so only the claimant can supply them. The activity is picked from the state's usual list; there
-  is no follow-up activity type and no config field that preselects one.
+  so only the claimant can supply them. The activity is picked from the state's usual list.
+  _Amended by [ADR 0011](./0011-follow-up-preselects-an-activity.md): the activity now starts
+  on the state config's follow-up activity, where it names one._
 - **A link:** the new Entry stores `linkedTo`, the id of the Entry the chain started from. Follow
   up on an Entry that is itself linked copies from that Entry but links to the same original, so a
   chain never grows deeper than one level.

@@ -5,6 +5,7 @@ import {
   getStateConfig,
   isStale,
   listStateConfigs,
+  normalizeConfig,
   resolveActivity,
 } from './index'
 import type { Entry } from '../types'
@@ -125,6 +126,23 @@ describe('weeklyRequirement', () => {
   })
 })
 
+describe('followUpActivityId', () => {
+  it('preselects follow_up in TX and the generic config, and nothing in WA', () => {
+    expect(getStateConfig('TX').config.followUpActivityId).toBe('follow_up')
+    expect(genericConfig.followUpActivityId).toBe('follow_up')
+    expect(getStateConfig('WA').config.followUpActivityId).toBeUndefined()
+  })
+
+  it("drops an id the config doesn't define, so the choice starts blank", () => {
+    const config = normalizeConfig({
+      code: 'XX',
+      follow_up_activity: 'follow_upp',
+      activity_types: [{ id: 'follow_up', label: 'Followed up', counts_as: 'employer_contact' }],
+    })
+    expect(config?.followUpActivityId).toBeUndefined()
+  })
+})
+
 describe('isStale', () => {
   const base = { ...genericConfig }
 
@@ -178,6 +196,7 @@ const KNOWN_CONFIG_KEYS = new Set([
   'claim_id_label',
   'has_online_logging',
   'activity_types',
+  'follow_up_activity',
   'contact_methods',
   'result_options',
   'site_options',
@@ -221,6 +240,16 @@ describe('bundled config files (raw JSON, before normalization)', () => {
             `${path}: activity_types[${i}] (id: ${String(rec.id)}) is missing a non-empty label`,
           ).toBe(true)
         })
+      })
+
+      it('names one of its own activities as follow_up_activity, if it sets one', () => {
+        if (raw.follow_up_activity === undefined) return
+        const ids = (Array.isArray(raw.activity_types) ? raw.activity_types : []).map(
+          (activity: unknown) => ((activity ?? {}) as Record<string, unknown>).id,
+        )
+        expect(ids, `${path}: follow_up_activity must be one of its activity ids`).toContain(
+          raw.follow_up_activity,
+        )
       })
 
       it('has unique activity ids', () => {

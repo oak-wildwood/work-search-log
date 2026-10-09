@@ -221,7 +221,8 @@ describe('EntryForm', () => {
       expect((wrapper.get('#f-contract').element as HTMLInputElement).checked).toBe(true)
 
       expect(value('#f-date')).toBe('')
-      expect(value('#f-activity')).toBe('')
+      // The config's follow-up activity is a starting value, not a blank (ADR 0011).
+      expect(value('#f-activity')).toBe('follow_up')
       expect(value('#f-site')).toBe('')
       expect(value('#f-method')).toBe('')
       expect(value('#f-result')).toBe('')
@@ -235,7 +236,32 @@ describe('EntryForm', () => {
       expect(wrapper.find('#f-method').exists()).toBe(true)
     })
 
-    it('saves nothing until the claimant picks a date and activity', async () => {
+    it('preselects nothing where the state has no follow-up activity', async () => {
+      useSettings().setStateCode('WA')
+      const wrapper = mount(EntryForm, { props: { followingUp: source() } })
+      await nextTick()
+      expect((wrapper.get('#f-activity').element as HTMLSelectElement).value).toBe('')
+      // The draft itself must be blank too, not just the dropdown's display.
+      await wrapper.get('#f-date').setValue('2026-09-19')
+      await wrapper.get('form').trigger('submit')
+      expect(wrapper.emitted('submit')).toBeUndefined()
+    })
+
+    it('lets the claimant change the preselected activity before saving', async () => {
+      const wrapper = mount(EntryForm, { props: { followingUp: source() } })
+      await nextTick()
+      await wrapper.get('#f-date').setValue('2026-09-19')
+      await wrapper.get('#f-activity').setValue('interview')
+      await wrapper.get('form').trigger('submit')
+      expect((wrapper.emitted('submit')?.[0]?.[0] as EntryDraft).activityId).toBe('interview')
+    })
+
+    it('leaves the normal form without an activity', () => {
+      const wrapper = mount(EntryForm)
+      expect((wrapper.get('#f-activity').element as HTMLSelectElement).value).toBe('')
+    })
+
+    it('saves nothing until the claimant picks a date', async () => {
       const wrapper = mount(EntryForm, { props: { followingUp: source() } })
       await nextTick()
       await wrapper.get('form').trigger('submit')

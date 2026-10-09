@@ -9,6 +9,7 @@
   "claim_id_label": "Claim number",
   "has_online_logging": false,
 
+  "follow_up_activity": "follow_up",
   "activity_types": [
     { "id": "apply_online", "label": "Applied online for a job", "counts_as": "employer_contact" },
     {
