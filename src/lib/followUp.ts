@@ -44,7 +44,7 @@ export function followUpFields(
   }
 }
 
-/** How many Entries link to `id`, for the warning shown before deleting it. */
+/** How many Entries link to `id`; an Entry with any can't be deleted (ADR 0009). */
 export function countLinkedTo(entries: readonly Entry[], id: string): number {
   return entries.filter((entry) => entry.linkedTo === id).length
 }
