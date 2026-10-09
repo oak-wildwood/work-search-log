@@ -400,7 +400,6 @@ h2 {
 }
 .add-form.following-up {
   border: 2px solid var(--brass);
-  border-left-width: 6px;
   background: linear-gradient(rgba(138, 109, 59, 0.07), rgba(138, 109, 59, 0.07)), var(--card);
   box-shadow:
     0 0 0 4px rgba(138, 109, 59, 0.18),
